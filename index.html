@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -28,6 +27,7 @@ input,textarea,button{font-family:inherit}
 <body>
 <div id="root"></div>
 <script>
+window.onerror=function(msg,src,line){document.getElementById('root').innerHTML='<div style="color:#e88;padding:20px;font-family:monospace;font-size:13px;white-space:pre-wrap"><b>Error:</b> '+msg+'\nLine: '+line+'\nSrc: '+src+'</div>';};
 // === IDB ===
 const IDB={_db:null,
 open(){return new Promise((r,j)=>{if(this._db)return r(this._db);const q=indexedDB.open('worldforge',3);q.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');};q.onsuccess=e=>{this._db=e.target.result;r(this._db);};q.onerror=e=>j(e);});},
@@ -38,11 +38,11 @@ async list(p){const d=await this.open();return new Promise((r,j)=>{const ks=[];c
 async clear(){const d=await this.open();return new Promise((r,j)=>{const t=d.transaction('kv','readwrite').objectStore('kv').clear();t.onsuccess=()=>r(true);t.onerror=e=>j(e);});}};
 
 // === Config ===
-const CARD_TMPL={entity:[“characters”,“organizations”],location:[“locations”],notable:[“notable-locations”,“architecture”],system:[“magic-technology”,“politics”,“economy”,“languages”,“education”,“healthcare”,“transportation”],culture:[“cultures”,“religion-beliefs”,“arts-entertainment”,“food-cuisine”,“fashion”,“calendar-time”],event:[“history”,“military”,“story-elements”,“cosmology”],creature:[“flora-fauna”],geography:[“geography”]};
+const CARD_TMPL={entity:["characters","organizations"],location:["locations"],notable:["notable-locations","architecture"],system:["magic-technology","politics","economy","languages","education","healthcare","transportation"],culture:["cultures","religion-beliefs","arts-entertainment","food-cuisine","fashion","calendar-time"],event:["history","military","story-elements","cosmology"],creature:["flora-fauna"],geography:["geography"]};
 const TMPL_FOR={};Object.entries(CARD_TMPL).forEach(([t,ids])=>ids.forEach(id=>TMPL_FOR[id]=t));
+window.TMPL_FOR=TMPL_FOR;window.CAT_RULES=CAT_RULES;window.CARD_TMPL=CARD_TMPL;
 
 const CAT_RULES=`CATEGORY RULES - follow strictly:
-
 - characters: Named individuals with agency who act and decide.
 - locations: Every named place (cities, towns, regions, bodies of water).
 - notable-locations: Places with narrative SIGNIFICANCE (capitals, battle sites, holy sites).
@@ -57,368 +57,363 @@ const CAT_RULES=`CATEGORY RULES - follow strictly:
 - flora-fauna: Non-person organisms.
 - economy: Trade, currency, resources.
 - languages: Communication systems, scripts.
-  CRITICAL: ONLY extract entities EXPLICITLY named in the text. NEVER invent from general knowledge. When uncertain, EXCLUDE.
-  TIMELINE: If any dates or years are mentioned alongside entities, include “year” field in your response.`;
+CRITICAL: ONLY extract entities EXPLICITLY named in the text. NEVER invent from general knowledge. When uncertain, EXCLUDE.
+TIMELINE: If any dates or years are mentioned alongside entities, include "year" field in your response.`;
 
 window.ASPECTS=[
-{id:“characters”,name:“Characters”,icon:”\u{1f464}”,topicPrompt:“List every named character mentioned”},
-{id:“locations”,name:“Locations”,icon:”\u{1f3d8}\ufe0f”,topicPrompt:“List every named place, city, town, village, region mentioned”},
-{id:“notable-locations”,name:“Notable Locations”,icon:”\u{1f4cd}”,topicPrompt:“List every location of narrative significance”},
-{id:“cultures”,name:“Cultures”,icon:”\u{1f3db}\ufe0f”,topicPrompt:“List every culture or civilization mentioned”},
-{id:“history”,name:“History”,icon:”\u{1f4dc}”,topicPrompt:“List every historical event mentioned. Include year if stated.”},
-{id:“geography”,name:“Geography”,icon:”\u{1f5fa}\ufe0f”,topicPrompt:“List every physical landscape feature mentioned”},
-{id:“politics”,name:“Politics”,icon:”\u2696\ufe0f”,topicPrompt:“List every political entity or government mentioned”},
-{id:“religion-beliefs”,name:“Religion & Beliefs”,icon:”\u{1f56f}\ufe0f”,topicPrompt:“List every religion or faith system mentioned”},
-{id:“organizations”,name:“Organizations”,icon:”\u{1f3f4}”,topicPrompt:“List every organized group mentioned”},
-{id:“military”,name:“Military & Warfare”,icon:”\u2694\ufe0f”,topicPrompt:“List every military force mentioned”},
-{id:“magic-technology”,name:“Magic / Technology”,icon:”\u2728”,topicPrompt:“List every magic system or technology mentioned”},
-{id:“economy”,name:“Economy”,icon:”\u{1f4b0}”,topicPrompt:“List every economic system mentioned”},
-{id:“languages”,name:“Languages”,icon:”\u{1f524}”,topicPrompt:“List every language mentioned”},
-{id:“flora-fauna”,name:“Flora & Fauna”,icon:”\u{1f33f}”,topicPrompt:“List every creature or species mentioned”},
-{id:“story-elements”,name:“Story Elements”,icon:”\u{1f4d6}”,topicPrompt:“List every plot thread mentioned”},
-{id:“cosmology”,name:“Cosmology”,icon:”\u{1f30c}”,topicPrompt:“List every cosmic entity mentioned”},
-{id:“calendar-time”,name:“Calendar & Time”,icon:”\u{1f4c5}”,topicPrompt:“List every calendar or festival mentioned”},
-{id:“arts-entertainment”,name:“Arts & Entertainment”,icon:”\u{1f3ad}”,topicPrompt:“List every art form mentioned”},
-{id:“food-cuisine”,name:“Food & Cuisine”,icon:”\u{1f37d}\ufe0f”,topicPrompt:“List every dish mentioned”},
-{id:“fashion”,name:“Fashion”,icon:”\u{1f458}”,topicPrompt:“List every clothing style mentioned”},
-{id:“architecture”,name:“Architecture”,icon:”\u{1f3f0}”,topicPrompt:“List every building mentioned”},
-{id:“transportation”,name:“Transportation”,icon:”\u{1f6a2}”,topicPrompt:“List every transport system mentioned”},
-{id:“education”,name:“Education”,icon:”\u{1f4da}”,topicPrompt:“List every school mentioned”},
-{id:“healthcare”,name:“Healthcare”,icon:”\u{1f3e5}”,topicPrompt:“List every medical practice mentioned”},
+{id:"characters",name:"Characters",icon:"\u{1f464}",topicPrompt:"List every named character mentioned"},
+{id:"locations",name:"Locations",icon:"\u{1f3d8}\ufe0f",topicPrompt:"List every named place, city, town, village, region mentioned"},
+{id:"notable-locations",name:"Notable Locations",icon:"\u{1f4cd}",topicPrompt:"List every location of narrative significance"},
+{id:"cultures",name:"Cultures",icon:"\u{1f3db}\ufe0f",topicPrompt:"List every culture or civilization mentioned"},
+{id:"history",name:"History",icon:"\u{1f4dc}",topicPrompt:"List every historical event mentioned. Include year if stated."},
+{id:"geography",name:"Geography",icon:"\u{1f5fa}\ufe0f",topicPrompt:"List every physical landscape feature mentioned"},
+{id:"politics",name:"Politics",icon:"\u2696\ufe0f",topicPrompt:"List every political entity or government mentioned"},
+{id:"religion-beliefs",name:"Religion & Beliefs",icon:"\u{1f56f}\ufe0f",topicPrompt:"List every religion or faith system mentioned"},
+{id:"organizations",name:"Organizations",icon:"\u{1f3f4}",topicPrompt:"List every organized group mentioned"},
+{id:"military",name:"Military & Warfare",icon:"\u2694\ufe0f",topicPrompt:"List every military force mentioned"},
+{id:"magic-technology",name:"Magic / Technology",icon:"\u2728",topicPrompt:"List every magic system or technology mentioned"},
+{id:"economy",name:"Economy",icon:"\u{1f4b0}",topicPrompt:"List every economic system mentioned"},
+{id:"languages",name:"Languages",icon:"\u{1f524}",topicPrompt:"List every language mentioned"},
+{id:"flora-fauna",name:"Flora & Fauna",icon:"\u{1f33f}",topicPrompt:"List every creature or species mentioned"},
+{id:"story-elements",name:"Story Elements",icon:"\u{1f4d6}",topicPrompt:"List every plot thread mentioned"},
+{id:"cosmology",name:"Cosmology",icon:"\u{1f30c}",topicPrompt:"List every cosmic entity mentioned"},
+{id:"calendar-time",name:"Calendar & Time",icon:"\u{1f4c5}",topicPrompt:"List every calendar or festival mentioned"},
+{id:"arts-entertainment",name:"Arts & Entertainment",icon:"\u{1f3ad}",topicPrompt:"List every art form mentioned"},
+{id:"food-cuisine",name:"Food & Cuisine",icon:"\u{1f37d}\ufe0f",topicPrompt:"List every dish mentioned"},
+{id:"fashion",name:"Fashion",icon:"\u{1f458}",topicPrompt:"List every clothing style mentioned"},
+{id:"architecture",name:"Architecture",icon:"\u{1f3f0}",topicPrompt:"List every building mentioned"},
+{id:"transportation",name:"Transportation",icon:"\u{1f6a2}",topicPrompt:"List every transport system mentioned"},
+{id:"education",name:"Education",icon:"\u{1f4da}",topicPrompt:"List every school mentioned"},
+{id:"healthcare",name:"Healthcare",icon:"\u{1f3e5}",topicPrompt:"List every medical practice mentioned"},
 ];
 window.MAX_WORLDS=10;
 
-function normTag(t){return t.toLowerCase().trim().replace(/\s+/g,’-’).replace(/[^a-z0-9-]/g,’’);}
-function normTags(a){return[…new Set((a||[]).map(normTag).filter(t=>t.length>0))];}
-function mkId(){return Date.now().toString(36)+’-’+Math.random().toString(36).slice(2,6);}
-function safeArr(v){if(!v)return[];if(Array.isArray(v))return v;if(typeof v===‘object’)return Object.values(v);return[];}
+function normTag(t){return t.toLowerCase().trim().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'');}
+function normTags(a){return[...new Set((a||[]).map(normTag).filter(t=>t.length>0))];}
+function mkId(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);}
+function safeArr(v){if(!v)return[];if(Array.isArray(v))return v;if(typeof v==='object')return Object.values(v);return[];}
 
 // === COA (Coat of Arms) Rendering ===
 window.coaUrl=function(coa){
-if(!coa)return null;
-try{return”https://armoria.herokuapp.com/?coa=”+encodeURIComponent(JSON.stringify(coa));}catch(e){return null;}
+  if(!coa)return null;
+  try{return"https://armoria.herokuapp.com/?coa="+encodeURIComponent(JSON.stringify(coa));}catch(e){return null;}
 };
 // MFCG city map link
 window.mfcgUrl=function(burg,seed){
-if(!burg)return null;
-const s=seed||burg.MFCG||burg.i||0;
-const size=Math.max(1,Math.min(60,Math.round((burg.population||1)*10)));
-return”https://watabou.github.io/city-generator/?seed=”+s+”&size=”+size+(burg.port?”&coast=1”:””)+(burg.citadel?”&citadel=1”:””)+(burg.walls?”&walls=1”:””)+(burg.plaza?”&plaza=1”:””)+(burg.temple?”&temple=1”:””)+(burg.shanty?”&shanty=1”:””);
+  if(!burg)return null;
+  const s=seed||burg.MFCG||burg.i||0;
+  const size=Math.max(1,Math.min(60,Math.round((burg.population||1)*10)));
+  return"https://watabou.github.io/city-generator/?seed="+s+"&size="+size+(burg.port?"&coast=1":"")+(burg.citadel?"&citadel=1":"")+(burg.walls?"&walls=1":"")+(burg.plaza?"&plaza=1":"")+(burg.temple?"&temple=1":"")+(burg.shanty?"&shanty=1":"");
 };
 
 // === Enriched Azgaar Parser ===
 window.parseAzgaarMap=function(text){
-const R={svg:null,pack:null,params:null,error:null,debug:[]};
-try{
-R.debug.push(“Size:”+text.length);
-const ss=text.indexOf(’<svg’),se=text.lastIndexOf(’</svg>’);
-if(ss<0||se<0){R.error=“No SVG”;return R;}
-R.svg=text.substring(ss,se+6);
-// Params from first line
-const fl=text.substring(0,ss).split(’\n’)[0].trim();
-if(fl.startsWith(’{’)){try{R.params=JSON.parse(fl);}catch(e){}}
-// Find pack JSON
-const after=text.substring(se+6);
-const objs=[];let d=0,os=-1;
-for(let i=0;i<after.length;i++){if(after[i]===’{’){if(d===0)os=i;d++;}else if(after[i]===’}’){d–;if(d===0&&os>=0){objs.push({s:os,e:i+1});os=-1;}}}
-for(let i=0;i<objs.length;i++){
-const str=after.substring(objs[i].s,objs[i].e);
-try{const o=JSON.parse(str);if(o.states||o.burgs||o.cultures){R.pack=o;R.debug.push(“Pack at “+i);break;}
-if(o.cells||o.vertices){continue;}}catch(e){R.debug.push(“Obj “+i+” fail”);}
-}
-if(!R.pack)R.error=“Pack not found”;
-}catch(e){R.error=e.message;}
-return R;
+  const R={svg:null,pack:null,params:null,error:null,debug:[]};
+  try{
+    R.debug.push("Size:"+text.length);
+    const ss=text.indexOf('<svg'),se=text.lastIndexOf('</svg>');
+    if(ss<0||se<0){R.error="No SVG";return R;}
+    R.svg=text.substring(ss,se+6);
+    // Params from first line
+    const fl=text.substring(0,ss).split('\n')[0].trim();
+    if(fl.startsWith('{')){try{R.params=JSON.parse(fl);}catch(e){}}
+    // Find pack JSON
+    const after=text.substring(se+6);
+    const objs=[];let d=0,os=-1;
+    for(let i=0;i<after.length;i++){if(after[i]==='{'){if(d===0)os=i;d++;}else if(after[i]==='}'){d--;if(d===0&&os>=0){objs.push({s:os,e:i+1});os=-1;}}}
+    for(let i=0;i<objs.length;i++){
+      const str=after.substring(objs[i].s,objs[i].e);
+      try{const o=JSON.parse(str);if(o.states||o.burgs||o.cultures){R.pack=o;R.debug.push("Pack at "+i);break;}
+        if(o.cells||o.vertices){continue;}}catch(e){R.debug.push("Obj "+i+" fail");}
+    }
+    if(!R.pack)R.error="Pack not found";
+  }catch(e){R.error=e.message;}
+  return R;
 };
 
 // === Enriched topic generation from Azgaar pack ===
 window.generateTopicsFromPack=function(pack,wid,params){
-const T=[];if(!pack)return T;
-const states=safeArr(pack.states),burgs=safeArr(pack.burgs),cultures=safeArr(pack.cultures),
-religions=safeArr(pack.religions),rivers=safeArr(pack.rivers),military=safeArr(pack.military),
-provinces=safeArr(pack.provinces),biomes=safeArr(pack.biomes),cells=pack.cells||{};
-const sN={},cN={},rN={},sColor={},sCoa={};
-states.forEach(s=>{if(s&&s.i>0){sN[s.i]=s.name||s.fullName||“State “+s.i;sColor[s.i]=s.color||””;sCoa[s.i]=s.coa||null;}});
-cultures.forEach(c=>{if(c&&c.i>0)cN[c.i]=c.name||“Culture “+c.i;});
-religions.forEach(r=>{if(r&&r.i>0)rN[r.i]=r.name||“Religion “+r.i;});
+  const T=[];if(!pack)return T;
+  const states=safeArr(pack.states),burgs=safeArr(pack.burgs),cultures=safeArr(pack.cultures),
+    religions=safeArr(pack.religions),rivers=safeArr(pack.rivers),military=safeArr(pack.military),
+    provinces=safeArr(pack.provinces),biomes=safeArr(pack.biomes),cells=pack.cells||{};
+  const sN={},cN={},rN={},sColor={},sCoa={};
+  states.forEach(s=>{if(s&&s.i>0){sN[s.i]=s.name||s.fullName||"State "+s.i;sColor[s.i]=s.color||"";sCoa[s.i]=s.coa||null;}});
+  cultures.forEach(c=>{if(c&&c.i>0)cN[c.i]=c.name||"Culture "+c.i;});
+  religions.forEach(r=>{if(r&&r.i>0)rN[r.i]=r.name||"Religion "+r.i;});
 
-// Get biome name for a cell
-const biomeNames=[“Marine”,“Hot desert”,“Cold desert”,“Savanna”,“Grassland”,“Tropical seasonalForest”,“Temperate deciduous forest”,“Tropical rainforest”,“Temperate rainforest”,“Taiga”,“Tundra”,“Glacier”,“Wetland”];
-const getBiome=(cellId)=>{
-if(cells.biome&&cells.biome[cellId]!==undefined){const bi=cells.biome[cellId];return biomeNames[bi]||“Biome “+bi;}return””;
-};
-const getElev=(cellId)=>cells.h&&cells.h[cellId]!==undefined?cells.h[cellId]:null;
-const getTemp=(cellId)=>cells.temp&&cells.temp[cellId]!==undefined?cells.temp[cellId]:null;
+  // Get biome name for a cell
+  const biomeNames=["Marine","Hot desert","Cold desert","Savanna","Grassland","Tropical seasonalForest","Temperate deciduous forest","Tropical rainforest","Temperate rainforest","Taiga","Tundra","Glacier","Wetland"];
+  const getBiome=(cellId)=>{
+    if(cells.biome&&cells.biome[cellId]!==undefined){const bi=cells.biome[cellId];return biomeNames[bi]||"Biome "+bi;}return"";
+  };
+  const getElev=(cellId)=>cells.h&&cells.h[cellId]!==undefined?cells.h[cellId]:null;
+  const getTemp=(cellId)=>cells.temp&&cells.temp[cellId]!==undefined?cells.temp[cellId]:null;
 
-// World year from params
-const worldYear=params?.options?.year||params?.year||null;
-const eraName=params?.options?.eraName||params?.eraName||””;
+  // World year from params
+  const worldYear=params?.options?.year||params?.year||null;
+  const eraName=params?.options?.eraName||params?.eraName||"";
 
-// === STATES -> politics ===
-states.forEach(s=>{
-if(!s||!s.i||s.i===0||s.removed)return;
-const cap=s.capital&&burgs[s.capital]?burgs[s.capital]:null;
-const cult=s.culture?cN[s.culture]||”?”:”?”;
-const rel=s.religion?rN[s.religion]||”?”:”?”;
-const totalPop=Math.round(((s.rural||0)+(s.urban||0))*1000);
-// Diplomacy
-const diplo=[];
-if(s.diplomacy)s.diplomacy.forEach((d,i)=>{if(i>0&&d&&d!==“x”&&d!==“Neutral”&&sN[i])diplo.push(sN[i]+”: “+d);});
-// Provinces
-const provs=provinces.filter(p=>p&&p.state===s.i&&p.name).map(p=>p.fullName||p.name);
+  // === STATES -> politics ===
+  states.forEach(s=>{
+    if(!s||!s.i||s.i===0||s.removed)return;
+    const cap=s.capital&&burgs[s.capital]?burgs[s.capital]:null;
+    const cult=s.culture?cN[s.culture]||"?":"?";
+    const rel=s.religion?rN[s.religion]||"?":"?";
+    const totalPop=Math.round(((s.rural||0)+(s.urban||0))*1000);
+    // Diplomacy
+    const diplo=[];
+    if(s.diplomacy)s.diplomacy.forEach((d,i)=>{if(i>0&&d&&d!=="x"&&d!=="Neutral"&&sN[i])diplo.push(sN[i]+": "+d);});
+    // Provinces
+    const provs=provinces.filter(p=>p&&p.state===s.i&&p.name).map(p=>p.fullName||p.name);
 
-```
-T.push({id:"azg-state-"+s.i,name:s.fullName||s.name,brief:(s.fullName||s.name)+", "+cult+" "+(s.form||"state")+". Pop: "+totalPop.toLocaleString(),
-  template:"system",tags:normTags([s.form||"",cult,"state",s.name]),aspect_id:"politics",world_id:wid,source:"azgaar",
-  coa:s.coa||null,color:s.color||"",born_year:null,died_year:null,timeline:[],
-  fields:{principle:"Government: "+(s.form||"Unknown"),
-    components:["Total population: "+totalPop.toLocaleString(),"Rural: "+Math.round((s.rural||0)*1000).toLocaleString(),"Urban: "+Math.round((s.urban||0)*1000).toLocaleString(),"Area: "+(s.area?Math.round(s.area):"?")+" cells"],
-    practitioners:"Culture: "+cult+"\nReligion: "+rel,effects:"Capital: "+(cap?cap.name:"?")+"\n"+(provs.length?"Provinces: "+provs.join(", "):""),
-    limitations:diplo.length?"Diplomacy:\n"+diplo.join("\n"):"",origin:""},
-  created:new Date().toISOString(),updated:new Date().toISOString()});
-```
+    T.push({id:"azg-state-"+s.i,name:s.fullName||s.name,brief:(s.fullName||s.name)+", "+cult+" "+(s.form||"state")+". Pop: "+totalPop.toLocaleString(),
+      template:"system",tags:normTags([s.form||"",cult,"state",s.name]),aspect_id:"politics",world_id:wid,source:"azgaar",
+      coa:s.coa||null,color:s.color||"",born_year:null,died_year:null,timeline:[],
+      fields:{principle:"Government: "+(s.form||"Unknown"),
+        components:["Total population: "+totalPop.toLocaleString(),"Rural: "+Math.round((s.rural||0)*1000).toLocaleString(),"Urban: "+Math.round((s.urban||0)*1000).toLocaleString(),"Area: "+(s.area?Math.round(s.area):"?")+" cells"],
+        practitioners:"Culture: "+cult+"\nReligion: "+rel,effects:"Capital: "+(cap?cap.name:"?")+"\n"+(provs.length?"Provinces: "+provs.join(", "):""),
+        limitations:diplo.length?"Diplomacy:\n"+diplo.join("\n"):"",origin:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});
+  });
 
-});
+  // === BURGS -> locations + notable-locations ===
+  burgs.forEach(b=>{
+    if(!b||!b.i||b.i===0||!b.name)return;
+    const st=b.state?sN[b.state]||"Unclaimed":"Unclaimed";
+    const cult=b.culture?cN[b.culture]||"?":"?";
+    const rel=b.religion?rN[b.religion]||"?":"?";
+    const pop=Math.round((b.population||0)*1000);
+    const feats=[];
+    if(b.capital)feats.push("Capital");if(b.port)feats.push("Port");if(b.citadel)feats.push("Citadel");
+    if(b.walls)feats.push("Walled");if(b.plaza)feats.push("Market");if(b.temple)feats.push("Temple");if(b.shanty)feats.push("Shantytown");
+    const biome=b.cell?getBiome(b.cell):"";
+    const elev=b.cell?getElev(b.cell):null;
+    const temp=b.cell?getTemp(b.cell):null;
+    const tags=normTags([st,cult,...feats,b.name,biome]);
+    const mfcg=mfcgUrl(b);
+    const coa=b.coa||null;
 
-// === BURGS -> locations + notable-locations ===
-burgs.forEach(b=>{
-if(!b||!b.i||b.i===0||!b.name)return;
-const st=b.state?sN[b.state]||“Unclaimed”:“Unclaimed”;
-const cult=b.culture?cN[b.culture]||”?”:”?”;
-const rel=b.religion?rN[b.religion]||”?”:”?”;
-const pop=Math.round((b.population||0)*1000);
-const feats=[];
-if(b.capital)feats.push(“Capital”);if(b.port)feats.push(“Port”);if(b.citadel)feats.push(“Citadel”);
-if(b.walls)feats.push(“Walled”);if(b.plaza)feats.push(“Market”);if(b.temple)feats.push(“Temple”);if(b.shanty)feats.push(“Shantytown”);
-const biome=b.cell?getBiome(b.cell):””;
-const elev=b.cell?getElev(b.cell):null;
-const temp=b.cell?getTemp(b.cell):null;
-const tags=normTags([st,cult,…feats,b.name,biome]);
-const mfcg=mfcgUrl(b);
-const coa=b.coa||null;
+    T.push({id:"azg-loc-"+b.i,name:b.name,brief:b.name+(b.capital?" (capital)":"")+", "+st+". Pop: "+pop.toLocaleString(),
+      template:"location",tags,aspect_id:"locations",world_id:wid,source:"azgaar",
+      coa,mfcg_url:mfcg,coords:{x:b.x||0,y:b.y||0},born_year:null,died_year:null,timeline:[],
+      fields:{type:feats.length?feats.join(", "):"Settlement",region:st,population:pop.toLocaleString(),
+        government:st,culture:cult,religion:rel,
+        climate:(biome||"")+(temp!==null?" ("+temp+"\u00b0)":""),
+        resources:"Elevation: "+(elev!==null?elev:"?"),
+        features:feats,mfcg_url:mfcg},
+      created:new Date().toISOString(),updated:new Date().toISOString()});
 
-```
-T.push({id:"azg-loc-"+b.i,name:b.name,brief:b.name+(b.capital?" (capital)":"")+", "+st+". Pop: "+pop.toLocaleString(),
-  template:"location",tags,aspect_id:"locations",world_id:wid,source:"azgaar",
-  coa,mfcg_url:mfcg,coords:{x:b.x||0,y:b.y||0},born_year:null,died_year:null,timeline:[],
-  fields:{type:feats.length?feats.join(", "):"Settlement",region:st,population:pop.toLocaleString(),
-    government:st,culture:cult,religion:rel,
-    climate:(biome||"")+(temp!==null?" ("+temp+"\u00b0)":""),
-    resources:"Elevation: "+(elev!==null?elev:"?"),
-    features:feats,mfcg_url:mfcg},
-  created:new Date().toISOString(),updated:new Date().toISOString()});
+    if(b.capital||feats.length>=2){
+      T.push({id:"azg-notable-"+b.i,name:b.name,brief:b.name+" — "+(b.capital?"Capital of "+st:feats.join(", ")),
+        template:"notable",tags:[...tags,"notable"],aspect_id:"notable-locations",world_id:wid,source:"azgaar",
+        coa,mfcg_url:mfcg,coords:{x:b.x||0,y:b.y||0},born_year:null,died_year:null,timeline:[],
+        fields:{significance:b.capital?"Capital of "+st:"Notable for "+feats.join(", "),
+          physical_desc:feats.join(", ")+(biome?" in "+biome:""),history_events:"",connected_entities:st+", "+cult,history:"Pop: "+pop.toLocaleString()},
+        created:new Date().toISOString(),updated:new Date().toISOString()});
+    }
+  });
 
-if(b.capital||feats.length>=2){
-  T.push({id:"azg-notable-"+b.i,name:b.name,brief:b.name+" — "+(b.capital?"Capital of "+st:feats.join(", ")),
-    template:"notable",tags:[...tags,"notable"],aspect_id:"notable-locations",world_id:wid,source:"azgaar",
-    coa,mfcg_url:mfcg,coords:{x:b.x||0,y:b.y||0},born_year:null,died_year:null,timeline:[],
-    fields:{significance:b.capital?"Capital of "+st:"Notable for "+feats.join(", "),
-      physical_desc:feats.join(", ")+(biome?" in "+biome:""),history_events:"",connected_entities:st+", "+cult,history:"Pop: "+pop.toLocaleString()},
-    created:new Date().toISOString(),updated:new Date().toISOString()});
-}
-```
+  // === CULTURES ===
+  cultures.forEach(c=>{
+    if(!c||!c.i||c.i===0||c.removed)return;
+    const parentCulture=c.base!==undefined&&cN[c.base]?cN[c.base]:"Indigenous";
+    const shieldShape=c.shield||"heater";
+    T.push({id:"azg-culture-"+c.i,name:c.name||"Culture "+c.i,
+      brief:(c.name||"")+" — "+(c.type||"")+" culture"+(c.base?" (from "+parentCulture+")":""),
+      template:"culture",tags:normTags([c.type||"",c.name,"culture"]),aspect_id:"cultures",world_id:wid,source:"azgaar",
+      coa:c.coa||null,born_year:null,died_year:null,timeline:[],
+      fields:{origin:"Type: "+(c.type||"?")+"\nDerived from: "+parentCulture+"\nShield style: "+shieldShape,
+        values_beliefs:"",customs_practices:"Naming method: "+(c.code||"default"),
+        art_expression:"",social_structure:"",language:"",relations:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});
+  });
 
-});
+  // === RELIGIONS ===
+  religions.forEach(r=>{
+    if(!r||!r.i||r.i===0||r.removed)return;
+    const originCult=r.culture!==undefined?cN[r.culture]||"?":"?";
+    T.push({id:"azg-religion-"+r.i,name:r.name||"Religion "+r.i,
+      brief:(r.name||"")+" — "+(r.form||"")+" "+(r.type||"religion")+". Origin: "+originCult,
+      template:"culture",tags:normTags([r.type||"",r.form||"",r.name,"religion"]),aspect_id:"religion-beliefs",world_id:wid,source:"azgaar",
+      born_year:null,died_year:null,timeline:[],
+      fields:{origin:"Type: "+(r.type||"?")+"\nForm: "+(r.form||"?")+"\nOrigin culture: "+originCult,
+        values_beliefs:r.deity?"Central deity: "+r.deity:"No central deity",
+        customs_practices:"",art_expression:"",social_structure:"",language:"",relations:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});
+  });
 
-// === CULTURES ===
-cultures.forEach(c=>{
-if(!c||!c.i||c.i===0||c.removed)return;
-const parentCulture=c.base!==undefined&&cN[c.base]?cN[c.base]:“Indigenous”;
-const shieldShape=c.shield||“heater”;
-T.push({id:“azg-culture-”+c.i,name:c.name||“Culture “+c.i,
-brief:(c.name||””)+” — “+(c.type||””)+” culture”+(c.base?” (from “+parentCulture+”)”:””),
-template:“culture”,tags:normTags([c.type||””,c.name,“culture”]),aspect_id:“cultures”,world_id:wid,source:“azgaar”,
-coa:c.coa||null,born_year:null,died_year:null,timeline:[],
-fields:{origin:“Type: “+(c.type||”?”)+”\nDerived from: “+parentCulture+”\nShield style: “+shieldShape,
-values_beliefs:””,customs_practices:“Naming method: “+(c.code||“default”),
-art_expression:””,social_structure:””,language:””,relations:””},
-created:new Date().toISOString(),updated:new Date().toISOString()});
-});
+  // === RIVERS -> geography ===
+  rivers.forEach(rv=>{
+    if(!rv||!rv.i||!rv.name)return;
+    T.push({id:"azg-river-"+rv.i,name:rv.name+(rv.type&&rv.type!=="River"?" ("+rv.type+")":""),
+      brief:rv.name+" — "+(rv.type||"river")+", length "+(rv.length?Math.round(rv.length):"?"),
+      template:"geography",tags:normTags([rv.type||"river",rv.name,"geography"]),aspect_id:"geography",world_id:wid,source:"azgaar",
+      born_year:null,died_year:null,timeline:[],
+      fields:{type:rv.type||"River",scale:"Length: "+(rv.length?Math.round(rv.length):"?"),
+        physical_desc:"",climate_ecology:"Basin: "+(rv.basin||"?"),resources:"",connected:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});
+  });
 
-// === RELIGIONS ===
-religions.forEach(r=>{
-if(!r||!r.i||r.i===0||r.removed)return;
-const originCult=r.culture!==undefined?cN[r.culture]||”?”:”?”;
-T.push({id:“azg-religion-”+r.i,name:r.name||“Religion “+r.i,
-brief:(r.name||””)+” — “+(r.form||””)+” “+(r.type||“religion”)+”. Origin: “+originCult,
-template:“culture”,tags:normTags([r.type||””,r.form||””,r.name,“religion”]),aspect_id:“religion-beliefs”,world_id:wid,source:“azgaar”,
-born_year:null,died_year:null,timeline:[],
-fields:{origin:“Type: “+(r.type||”?”)+”\nForm: “+(r.form||”?”)+”\nOrigin culture: “+originCult,
-values_beliefs:r.deity?“Central deity: “+r.deity:“No central deity”,
-customs_practices:””,art_expression:””,social_structure:””,language:””,relations:””},
-created:new Date().toISOString(),updated:new Date().toISOString()});
-});
+  // === MILITARY ===
+  military.forEach((m,idx)=>{
+    if(!m||idx===0)return;const units=safeArr(m);if(!units.length)return;
+    const sn=sN[idx]||"State "+idx;
+    const regs=units.map(r=>(r.name||"Unit")+" ("+(r.type||"?")+": "+(r.n||0)+")").slice(0,15);
+    T.push({id:"azg-mil-"+idx,name:sn+" Armed Forces",brief:"Military of "+sn+" — "+units.length+" regiments",
+      template:"system",tags:normTags([sn,"military"]),aspect_id:"military",world_id:wid,source:"azgaar",
+      born_year:null,died_year:null,timeline:[],
+      fields:{principle:sn+" military forces",composition:regs,command:sn,doctrine:"",
+        campaigns:[],strengths:"Total: "+units.length+" regiments",limitations:"",origin:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});
+  });
 
-// === RIVERS -> geography ===
-rivers.forEach(rv=>{
-if(!rv||!rv.i||!rv.name)return;
-T.push({id:“azg-river-”+rv.i,name:rv.name+(rv.type&&rv.type!==“River”?” (”+rv.type+”)”:””),
-brief:rv.name+” — “+(rv.type||“river”)+”, length “+(rv.length?Math.round(rv.length):”?”),
-template:“geography”,tags:normTags([rv.type||“river”,rv.name,“geography”]),aspect_id:“geography”,world_id:wid,source:“azgaar”,
-born_year:null,died_year:null,timeline:[],
-fields:{type:rv.type||“River”,scale:“Length: “+(rv.length?Math.round(rv.length):”?”),
-physical_desc:””,climate_ecology:“Basin: “+(rv.basin||”?”),resources:””,connected:””},
-created:new Date().toISOString(),updated:new Date().toISOString()});
-});
-
-// === MILITARY ===
-military.forEach((m,idx)=>{
-if(!m||idx===0)return;const units=safeArr(m);if(!units.length)return;
-const sn=sN[idx]||“State “+idx;
-const regs=units.map(r=>(r.name||“Unit”)+” (”+(r.type||”?”)+”: “+(r.n||0)+”)”).slice(0,15);
-T.push({id:“azg-mil-”+idx,name:sn+” Armed Forces”,brief:“Military of “+sn+” — “+units.length+” regiments”,
-template:“system”,tags:normTags([sn,“military”]),aspect_id:“military”,world_id:wid,source:“azgaar”,
-born_year:null,died_year:null,timeline:[],
-fields:{principle:sn+” military forces”,composition:regs,command:sn,doctrine:””,
-campaigns:[],strengths:“Total: “+units.length+” regiments”,limitations:””,origin:””},
-created:new Date().toISOString(),updated:new Date().toISOString()});
-});
-
-return T;
+  return T;
 };
 
 // === Data Layer ===
 window.db={
-async listWorlds(){const ks=await IDB.list(“world:”);const ws=[];for(const k of ks){const w=await IDB.get(k);if(w)ws.push(w);}ws.sort((a,b)=>(a.created||””).localeCompare(b.created||””));return ws;},
-async createWorld(n,desc,calName,curYear){const id=n.toLowerCase().replace(/[^a-z0-9]+/g,’-’).slice(0,40)+’-’+Math.random().toString(36).slice(2,8);const m={id,name:n,description:desc||””,calendar_name:calName||“Year”,current_year:parseInt(curYear)||0,viewing_year:parseInt(curYear)||0,eras:[],created:new Date().toISOString(),updated:new Date().toISOString()};await IDB.set(“world:”+id,m);await IDB.set(“bible:”+id,{world_id:id,world_name:n,last_updated:new Date().toISOString(),facts:{}});return m;},
-async saveWorld(w){w.updated=new Date().toISOString();return IDB.set(“world:”+w.id,w);},
-async deleteWorld(wid){await IDB.del(“world:”+wid);await IDB.del(“bible:”+wid);await IDB.del(“mapsvg:”+wid);await IDB.del(“mappack:”+wid);const ck=await IDB.list(“chat:”+wid+”:”);for(const k of ck)await IDB.del(k);const tk=await IDB.list(“topic:”+wid+”:”);for(const k of tk)await IDB.del(k);},
-async getBible(wid){return(await IDB.get(“bible:”+wid))||{world_id:wid,facts:{}};},
-async saveBible(wid,b){b.last_updated=new Date().toISOString();return IDB.set(“bible:”+wid,b);},
-async addFact(wid,cat,key,val){if(!wid)return false;const b=await this.getBible(wid);if(!b.facts)b.facts={};const c=cat.toLowerCase().replace(/\s+/g,’-’);if(!b.facts[c])b.facts[c]={};b.facts[c][key]=val;await this.saveBible(wid,b);return true;},
-async listChats(wid,aid){const ks=await IDB.list(“chat:”+wid+”:”+aid+”:”);const cs=[];for(const k of ks){const c=await IDB.get(k);if(c)cs.push(c);}cs.sort((a,b)=>(b.updated||””).localeCompare(a.updated||””));return cs;},
-async createChat(wid,aid,title){const id=mkId();const ch={id,world_id:wid,aspect_id:aid,title:title||(“Chat “+new Date().toLocaleString()),created:new Date().toISOString(),updated:new Date().toISOString(),messages:[]};await IDB.set(“chat:”+wid+”:”+aid+”:”+id,ch);return ch;},
-async saveChat(c){c.updated=new Date().toISOString();return IDB.set(“chat:”+c.world_id+”:”+c.aspect_id+”:”+c.id,c);},
-async loadChat(wid,aid,cid){return IDB.get(“chat:”+wid+”:”+aid+”:”+cid);},
-async listGeneralChats(){const ks=await IDB.list(“chat:**general**:**general**:”);const cs=[];for(const k of ks){const c=await IDB.get(k);if(c)cs.push(c);}cs.sort((a,b)=>(b.updated||””).localeCompare(a.updated||””));return cs;},
-async createGeneralChat(t){return this.createChat(”**general**”,”**general**”,t);},
-async fileNote(wid,aid,text){const chats=await this.listChats(wid,aid);let tgt=chats.find(c=>c.title===“Cross-World Notes”);if(tgt)tgt=await this.loadChat(wid,aid,tgt.id);if(!tgt)tgt=await this.createChat(wid,aid,“Cross-World Notes”);tgt.messages.push({role:“user”,content:text,timestamp:new Date().toISOString(),source:“cross-world”});await this.saveChat(tgt);},
-async gatherAspectText(wid,aid){const chats=await this.listChats(wid,aid);const ts=[];for(const ch of chats){const f=await this.loadChat(wid,aid,ch.id);if(f)for(const m of f.messages||[])ts.push(m.content||””);}return ts.join(”\n\n”);},
-async gatherAllText(wid){let all=””;for(const a of ASPECTS){const t=await this.gatherAspectText(wid,a.id);if(t)all+=”\n[”+a.name+”]\n”+t;}const w=await this.gatherAspectText(wid,”**worldchat**”);if(w)all+=”\n[World Chat]\n”+w;return all;},
-// Topics with timeline
-async saveTopic(t){t.updated=new Date().toISOString();t.tags=normTags(t.tags);if(!t.timeline)t.timeline=[];if(t.born_year===undefined)t.born_year=null;if(t.died_year===undefined)t.died_year=null;await IDB.set(“topic:”+t.world_id+”:”+t.aspect_id+”:”+t.id,t);return t;},
-async listTopics(wid,aid){const ks=await IDB.list(“topic:”+wid+”:”+aid+”:”);const ts=[];for(const k of ks){const t=await IDB.get(k);if(t)ts.push(t);}ts.sort((a,b)=>(a.name||””).localeCompare(b.name||””));return ts;},
-async deleteTopic(wid,aid,tid){return IDB.del(“topic:”+wid+”:”+aid+”:”+tid);},
-async countTopics(wid,aid){return(await IDB.list(“topic:”+wid+”:”+aid+”:”)).length;},
-async listAllTags(wid){const ks=await IDB.list(“topic:”+wid+”:”);const tags={};for(const k of ks){const t=await IDB.get(k);if(t&&t.tags)for(const tg of t.tags)tags[tg]=(tags[tg]||0)+1;}return Object.entries(tags).sort((a,b)=>b[1]-a[1]).map(([t,c])=>({tag:t,count:c}));},
-// Filter topics by viewing year
-filterByYear(topics,year){if(year===null||year===undefined)return topics;return topics.filter(t=>{const born=t.born_year;const died=t.died_year;if(born!==null&&year<born)return false;if(died!==null&&year>died)return false;return true;});},
-// Add timeline event to topic
-async addTimelineEvent(wid,aid,tid,year,event,changes){const t=await IDB.get(“topic:”+wid+”:”+aid+”:”+tid);if(!t)return;if(!t.timeline)t.timeline=[];t.timeline.push({year,event,changes:changes||{},added:new Date().toISOString()});t.timeline.sort((a,b)=>a.year-b.year);await this.saveTopic(t);return t;},
-// Get topic state at a given year (apply timeline events up to that year)
-getTopicAtYear(topic,year){if(!topic||year===null||year===undefined)return topic;const t={…topic,fields:{…(topic.fields||{})}};if(!t.timeline||!t.timeline.length)return t;for(const ev of t.timeline){if(ev.year<=year&&ev.changes){Object.entries(ev.changes).forEach(([k,v])=>{t.fields[k]=v;});}}return t;},
-async getWorldSummary(wid){const b=await this.getBible(wid);const f=b.facts||{};const p=[];for(const[c,e] of Object.entries(f)){const k=Object.keys(e).slice(0,3);if(k.length)p.push(c.replace(/-/g,’ ’)+”: “+k.join(”, “));}return p.slice(0,4).join(”. “)||“New world”;},
-// Map
-async saveMapSvg(wid,svg){return IDB.set(“mapsvg:”+wid,svg);},
-async getMapSvg(wid){return IDB.get(“mapsvg:”+wid);},
-async saveMapPack(wid,pack){return IDB.set(“mappack:”+wid,pack);},
-async getMapPack(wid){return IDB.get(“mappack:”+wid);},
-async hasMap(wid){return!!(await IDB.get(“mapsvg:”+wid));},
-async importAzgaarMap(wid,fileText){
-const parsed=parseAzgaarMap(fileText);if(parsed.error)return{error:parsed.error,debug:parsed.debug};
-if(parsed.svg)await this.saveMapSvg(wid,parsed.svg);
-// Auto-set world year from params
-if(parsed.params){const w=await IDB.get(“world:”+wid);if(w){
-if(parsed.params.options?.year)w.current_year=parsed.params.options.year;
-if(parsed.params.options?.era)w.calendar_name=parsed.params.options.era;
-if(parsed.params.mapName)w.name=w.name||parsed.params.mapName;
-await this.saveWorld(w);}}
-if(parsed.pack){await this.saveMapPack(wid,parsed.pack);
-const topics=generateTopicsFromPack(parsed.pack,wid,parsed.params);
-let added=0;for(const t of topics){const ex=await IDB.get(“topic:”+wid+”:”+t.aspect_id+”:”+t.id);if(!ex){await this.saveTopic(t);added++;}else{await this.saveTopic({…ex,fields:{…(ex.fields||{}),…(t.fields||{})},tags:normTags([…(ex.tags||[]),…(t.tags||[])]),coa:t.coa||ex.coa,mfcg_url:t.mfcg_url||ex.mfcg_url,coords:t.coords||ex.coords});}}
-return{added,total:topics.length,debug:parsed.debug};}
-return{added:0,total:0,debug:parsed.debug};},
-async importJsonExport(wid,jsonText){
-let pack;try{pack=JSON.parse(jsonText);}catch(e){return{error:“Invalid JSON”};}
-if(pack.pack)pack=pack.pack;if(!pack.states&&!pack.burgs)return{error:“No states/burgs. Keys: “+Object.keys(pack).slice(0,10).join(”,”)};
-await this.saveMapPack(wid,pack);
-const topics=generateTopicsFromPack(pack,wid);
-let added=0;for(const t of topics){const ex=await IDB.get(“topic:”+wid+”:”+t.aspect_id+”:”+t.id);if(!ex){await this.saveTopic(t);added++;}else{await this.saveTopic({…ex,fields:{…(ex.fields||{}),…(t.fields||{})},tags:normTags([…(ex.tags||[]),…(t.tags||[])]),coa:t.coa||ex.coa,mfcg_url:t.mfcg_url||ex.mfcg_url,coords:t.coords||ex.coords});}}
-return{added,total:topics.length};},
-// === Auto-enrich from Azgaar pack (NO AI needed) ===
-async autoEnrichFromPack(wid){
-const pack=await this.getMapPack(wid);if(!pack)return{enriched:0};
-const states=safeArr(pack.states),burgs=safeArr(pack.burgs),cultures=safeArr(pack.cultures),
-religions=safeArr(pack.religions);
-const sN={},cN={},rN={};
-states.forEach(s=>{if(s&&s.i>0)sN[s.i]=s.name||s.fullName||””;});
-cultures.forEach(c=>{if(c&&c.i>0)cN[c.i]=c.name||””;});
-religions.forEach(r=>{if(r&&r.i>0)rN[r.i]=r.name||””;});
-let enriched=0;
-// Auto-populate Bible from pack data
-const b=await this.getBible(wid);if(!b.facts)b.facts={};
-// States -> politics facts
-states.forEach(s=>{if(!s||!s.i||s.i===0||s.removed)return;
-const name=s.fullName||s.name;if(!name)return;
-if(!b.facts[‘politics’])b.facts[‘politics’]={};
-b.facts[‘politics’][name]=(s.form||“state”)+”, culture: “+(cN[s.culture]||”?”)+”, pop: “+Math.round(((s.rural||0)+(s.urban||0))*1000).toLocaleString();
-});
-// Cultures -> culture facts
-cultures.forEach(c=>{if(!c||!c.i||c.i===0||c.removed)return;
-if(!b.facts[‘cultures’])b.facts[‘cultures’]={};
-b.facts[‘cultures’][c.name||“Culture “+c.i]=(c.type||””)+” culture”;
-});
-// Religions -> religion facts
-religions.forEach(r=>{if(!r||!r.i||r.i===0||r.removed)return;
-if(!b.facts[‘religions’])b.facts[‘religions’]={};
-b.facts[‘religions’][r.name||“Religion “+r.i]=(r.form||””)+” “+(r.type||“religion”)+(r.deity?” — deity: “+r.deity:””);
-});
-await this.saveBible(wid,b);
-// Cross-reference: for each burg topic, add tags for its state, culture, religion
-const locTopics=await this.listTopics(wid,“locations”);
-for(const t of locTopics){
-if(t.source!==“azgaar”)continue;
-const burgId=parseInt((t.id.match(/\d+$/)||[“0”])[0]);
-const burg=burgs[burgId];if(!burg)continue;
-const newTags=[…t.tags];
-if(burg.state&&sN[burg.state])newTags.push(sN[burg.state]);
-if(burg.culture&&cN[burg.culture])newTags.push(cN[burg.culture]);
-if(burg.religion&&rN[burg.religion])newTags.push(rN[burg.religion]);
-// Add biome if available
-if(burg.capital)newTags.push(“capital”);
-if(burg.port)newTags.push(“port”);
-const merged={…t,tags:normTags(newTags)};
-if(merged.tags.length!==t.tags.length){await this.saveTopic(merged);enriched++;}
-}
-// Cross-ref: state topics get tags for their burgs
-const polTopics=await this.listTopics(wid,“politics”);
-for(const t of polTopics){
-if(t.source!==“azgaar”)continue;
-const stateId=parseInt((t.id.match(/\d+$/)||[“0”])[0]);
-const stateBurgs=burgs.filter(b=>b&&b.state===stateId&&b.name);
-const newTags=[…t.tags];
-stateBurgs.slice(0,10).forEach(b=>newTags.push(b.name));
-// Add diplomatic tags
-const s=states[stateId];
-if(s&&s.diplomacy){s.diplomacy.forEach((d,i)=>{
-if(i>0&&d&&d!==“x”&&d!==“Neutral”&&sN[i])newTags.push(sN[i]);
-});}
-const merged={…t,tags:normTags(newTags)};
-if(merged.tags.length!==t.tags.length){await this.saveTopic(merged);enriched++;}
-}
-return{enriched};
-},
-// Export
-async exportAll(){const data={version:“worldforge-v5”,exported:new Date().toISOString(),worlds:[],bibles:[],chats:[],topics:[],generalChats:[],mapData:[]};const ws=await this.listWorlds();for(const w of ws){data.worlds.push(w);data.bibles.push({wid:w.id,…(await this.getBible(w.id))});for(const asp of ASPECTS){const cs=await this.listChats(w.id,asp.id);for(const ch of cs){const f=await this.loadChat(w.id,asp.id,ch.id);if(f)data.chats.push(f);}const tps=await this.listTopics(w.id,asp.id);for(const t of tps)data.topics.push(t);}const wgc=await this.listChats(w.id,”**worldchat**”);for(const ch of wgc){const f=await this.loadChat(w.id,”**worldchat**”,ch.id);if(f)data.chats.push(f);}const svg=await this.getMapSvg(w.id);const pack=await this.getMapPack(w.id);if(svg||pack)data.mapData.push({wid:w.id,svg:svg||null,pack:pack||null});}const gc=await this.listGeneralChats();for(const ch of gc){const f=await this.loadChat(”**general**”,”**general**”,ch.id);if(f)data.generalChats.push(f);}return data;},
-async importAll(data){let ct={worlds:0,chats:0,topics:0};for(const w of data.worlds||[]){await IDB.set(“world:”+w.id,w);ct.worlds++;}for(const b of data.bibles||[]){const wid=b.wid||b.world_id;if(wid)await IDB.set(“bible:”+wid,b);}for(const c of data.chats||[]){await IDB.set(“chat:”+c.world_id+”:”+c.aspect_id+”:”+c.id,c);ct.chats++;}for(const c of data.generalChats||[]){await IDB.set(“chat:**general**:**general**:”+c.id,c);ct.chats++;}for(const t of data.topics||[]){await IDB.set(“topic:”+t.world_id+”:”+t.aspect_id+”:”+t.id,t);ct.topics++;}for(const m of data.mapData||[]){if(m.svg)await this.saveMapSvg(m.wid,m.svg);if(m.pack)await this.saveMapPack(m.wid,m.pack);}return ct;},
-async getApiKey(){return IDB.get(”_apikey”);},async setApiKey(k){return IDB.set(”_apikey”,k);},
-async getProvider(){return(await IDB.get(”_provider”))||“claude”;},async setProvider(p){return IDB.set(”_provider”,p);},
-async getCustomEndpoint(){return(await IDB.get(”_custom_endpoint”))||””;},async setCustomEndpoint(u){return IDB.set(”_custom_endpoint”,u);},
+  async listWorlds(){const ks=await IDB.list("world:");const ws=[];for(const k of ks){const w=await IDB.get(k);if(w)ws.push(w);}ws.sort((a,b)=>(a.created||"").localeCompare(b.created||""));return ws;},
+  async createWorld(n,desc,calName,curYear){const id=n.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)+'-'+Math.random().toString(36).slice(2,8);const m={id,name:n,description:desc||"",calendar_name:calName||"Year",current_year:parseInt(curYear)||0,viewing_year:parseInt(curYear)||0,eras:[],created:new Date().toISOString(),updated:new Date().toISOString()};await IDB.set("world:"+id,m);await IDB.set("bible:"+id,{world_id:id,world_name:n,last_updated:new Date().toISOString(),facts:{}});return m;},
+  async saveWorld(w){w.updated=new Date().toISOString();return IDB.set("world:"+w.id,w);},
+  async deleteWorld(wid){await IDB.del("world:"+wid);await IDB.del("bible:"+wid);await IDB.del("mapsvg:"+wid);await IDB.del("mappack:"+wid);const ck=await IDB.list("chat:"+wid+":");for(const k of ck)await IDB.del(k);const tk=await IDB.list("topic:"+wid+":");for(const k of tk)await IDB.del(k);},
+  async getBible(wid){return(await IDB.get("bible:"+wid))||{world_id:wid,facts:{}};},
+  async saveBible(wid,b){b.last_updated=new Date().toISOString();return IDB.set("bible:"+wid,b);},
+  async addFact(wid,cat,key,val){if(!wid)return false;const b=await this.getBible(wid);if(!b.facts)b.facts={};const c=cat.toLowerCase().replace(/\s+/g,'-');if(!b.facts[c])b.facts[c]={};b.facts[c][key]=val;await this.saveBible(wid,b);return true;},
+  async listChats(wid,aid){const ks=await IDB.list("chat:"+wid+":"+aid+":");const cs=[];for(const k of ks){const c=await IDB.get(k);if(c)cs.push(c);}cs.sort((a,b)=>(b.updated||"").localeCompare(a.updated||""));return cs;},
+  async createChat(wid,aid,title){const id=mkId();const ch={id,world_id:wid,aspect_id:aid,title:title||("Chat "+new Date().toLocaleString()),created:new Date().toISOString(),updated:new Date().toISOString(),messages:[]};await IDB.set("chat:"+wid+":"+aid+":"+id,ch);return ch;},
+  async saveChat(c){c.updated=new Date().toISOString();return IDB.set("chat:"+c.world_id+":"+c.aspect_id+":"+c.id,c);},
+  async loadChat(wid,aid,cid){return IDB.get("chat:"+wid+":"+aid+":"+cid);},
+  async listGeneralChats(){const ks=await IDB.list("chat:__general__:__general__:");const cs=[];for(const k of ks){const c=await IDB.get(k);if(c)cs.push(c);}cs.sort((a,b)=>(b.updated||"").localeCompare(a.updated||""));return cs;},
+  async createGeneralChat(t){return this.createChat("__general__","__general__",t);},
+  async fileNote(wid,aid,text){const chats=await this.listChats(wid,aid);let tgt=chats.find(c=>c.title==="Cross-World Notes");if(tgt)tgt=await this.loadChat(wid,aid,tgt.id);if(!tgt)tgt=await this.createChat(wid,aid,"Cross-World Notes");tgt.messages.push({role:"user",content:text,timestamp:new Date().toISOString(),source:"cross-world"});await this.saveChat(tgt);},
+  async gatherAspectText(wid,aid){const chats=await this.listChats(wid,aid);const ts=[];for(const ch of chats){const f=await this.loadChat(wid,aid,ch.id);if(f)for(const m of f.messages||[])ts.push(m.content||"");}return ts.join("\n\n");},
+  async gatherAllText(wid){let all="";for(const a of ASPECTS){const t=await this.gatherAspectText(wid,a.id);if(t)all+="\n["+a.name+"]\n"+t;}const w=await this.gatherAspectText(wid,"__worldchat__");if(w)all+="\n[World Chat]\n"+w;return all;},
+  // Topics with timeline
+  async saveTopic(t){t.updated=new Date().toISOString();t.tags=normTags(t.tags);if(!t.timeline)t.timeline=[];if(t.born_year===undefined)t.born_year=null;if(t.died_year===undefined)t.died_year=null;await IDB.set("topic:"+t.world_id+":"+t.aspect_id+":"+t.id,t);return t;},
+  async listTopics(wid,aid){const ks=await IDB.list("topic:"+wid+":"+aid+":");const ts=[];for(const k of ks){const t=await IDB.get(k);if(t)ts.push(t);}ts.sort((a,b)=>(a.name||"").localeCompare(b.name||""));return ts;},
+  async deleteTopic(wid,aid,tid){return IDB.del("topic:"+wid+":"+aid+":"+tid);},
+  async countTopics(wid,aid){return(await IDB.list("topic:"+wid+":"+aid+":")).length;},
+  async listAllTags(wid){const ks=await IDB.list("topic:"+wid+":");const tags={};for(const k of ks){const t=await IDB.get(k);if(t&&t.tags)for(const tg of t.tags)tags[tg]=(tags[tg]||0)+1;}return Object.entries(tags).sort((a,b)=>b[1]-a[1]).map(([t,c])=>({tag:t,count:c}));},
+  // Filter topics by viewing year
+  filterByYear(topics,year){if(year===null||year===undefined)return topics;return topics.filter(t=>{const born=t.born_year;const died=t.died_year;if(born!==null&&year<born)return false;if(died!==null&&year>died)return false;return true;});},
+  // Add timeline event to topic
+  async addTimelineEvent(wid,aid,tid,year,event,changes){const t=await IDB.get("topic:"+wid+":"+aid+":"+tid);if(!t)return;if(!t.timeline)t.timeline=[];t.timeline.push({year,event,changes:changes||{},added:new Date().toISOString()});t.timeline.sort((a,b)=>a.year-b.year);await this.saveTopic(t);return t;},
+  // Get topic state at a given year (apply timeline events up to that year)
+  getTopicAtYear(topic,year){if(!topic||year===null||year===undefined)return topic;const t={...topic,fields:{...(topic.fields||{})}};if(!t.timeline||!t.timeline.length)return t;for(const ev of t.timeline){if(ev.year<=year&&ev.changes){Object.entries(ev.changes).forEach(([k,v])=>{t.fields[k]=v;});}}return t;},
+  async getWorldSummary(wid){const b=await this.getBible(wid);const f=b.facts||{};const p=[];for(const[c,e] of Object.entries(f)){const k=Object.keys(e).slice(0,3);if(k.length)p.push(c.replace(/-/g,' ')+": "+k.join(", "));}return p.slice(0,4).join(". ")||"New world";},
+  // Map
+  async saveMapSvg(wid,svg){return IDB.set("mapsvg:"+wid,svg);},
+  async getMapSvg(wid){return IDB.get("mapsvg:"+wid);},
+  async saveMapPack(wid,pack){return IDB.set("mappack:"+wid,pack);},
+  async getMapPack(wid){return IDB.get("mappack:"+wid);},
+  async hasMap(wid){return!!(await IDB.get("mapsvg:"+wid));},
+  async importAzgaarMap(wid,fileText){
+    const parsed=parseAzgaarMap(fileText);if(parsed.error)return{error:parsed.error,debug:parsed.debug};
+    if(parsed.svg)await this.saveMapSvg(wid,parsed.svg);
+    // Auto-set world year from params
+    if(parsed.params){const w=await IDB.get("world:"+wid);if(w){
+      if(parsed.params.options?.year)w.current_year=parsed.params.options.year;
+      if(parsed.params.options?.era)w.calendar_name=parsed.params.options.era;
+      if(parsed.params.mapName)w.name=w.name||parsed.params.mapName;
+      await this.saveWorld(w);}}
+    if(parsed.pack){await this.saveMapPack(wid,parsed.pack);
+      const topics=generateTopicsFromPack(parsed.pack,wid,parsed.params);
+      let added=0;for(const t of topics){const ex=await IDB.get("topic:"+wid+":"+t.aspect_id+":"+t.id);if(!ex){await this.saveTopic(t);added++;}else{await this.saveTopic({...ex,fields:{...(ex.fields||{}),...(t.fields||{})},tags:normTags([...(ex.tags||[]),...(t.tags||[])]),coa:t.coa||ex.coa,mfcg_url:t.mfcg_url||ex.mfcg_url,coords:t.coords||ex.coords});}}
+      return{added,total:topics.length,debug:parsed.debug};}
+    return{added:0,total:0,debug:parsed.debug};},
+  async importJsonExport(wid,jsonText){
+    let pack;try{pack=JSON.parse(jsonText);}catch(e){return{error:"Invalid JSON"};}
+    if(pack.pack)pack=pack.pack;if(!pack.states&&!pack.burgs)return{error:"No states/burgs. Keys: "+Object.keys(pack).slice(0,10).join(",")};
+    await this.saveMapPack(wid,pack);
+    const topics=generateTopicsFromPack(pack,wid);
+    let added=0;for(const t of topics){const ex=await IDB.get("topic:"+wid+":"+t.aspect_id+":"+t.id);if(!ex){await this.saveTopic(t);added++;}else{await this.saveTopic({...ex,fields:{...(ex.fields||{}),...(t.fields||{})},tags:normTags([...(ex.tags||[]),...(t.tags||[])]),coa:t.coa||ex.coa,mfcg_url:t.mfcg_url||ex.mfcg_url,coords:t.coords||ex.coords});}}
+    return{added,total:topics.length};},
+  // === Auto-enrich from Azgaar pack (NO AI needed) ===
+  async autoEnrichFromPack(wid){
+    const pack=await this.getMapPack(wid);if(!pack)return{enriched:0};
+    const states=safeArr(pack.states),burgs=safeArr(pack.burgs),cultures=safeArr(pack.cultures),
+      religions=safeArr(pack.religions);
+    const sN={},cN={},rN={};
+    states.forEach(s=>{if(s&&s.i>0)sN[s.i]=s.name||s.fullName||"";});
+    cultures.forEach(c=>{if(c&&c.i>0)cN[c.i]=c.name||"";});
+    religions.forEach(r=>{if(r&&r.i>0)rN[r.i]=r.name||"";});
+    let enriched=0;
+    // Auto-populate Bible from pack data
+    const b=await this.getBible(wid);if(!b.facts)b.facts={};
+    // States -> politics facts
+    states.forEach(s=>{if(!s||!s.i||s.i===0||s.removed)return;
+      const name=s.fullName||s.name;if(!name)return;
+      if(!b.facts['politics'])b.facts['politics']={};
+      b.facts['politics'][name]=(s.form||"state")+", culture: "+(cN[s.culture]||"?")+", pop: "+Math.round(((s.rural||0)+(s.urban||0))*1000).toLocaleString();
+    });
+    // Cultures -> culture facts
+    cultures.forEach(c=>{if(!c||!c.i||c.i===0||c.removed)return;
+      if(!b.facts['cultures'])b.facts['cultures']={};
+      b.facts['cultures'][c.name||"Culture "+c.i]=(c.type||"")+" culture";
+    });
+    // Religions -> religion facts
+    religions.forEach(r=>{if(!r||!r.i||r.i===0||r.removed)return;
+      if(!b.facts['religions'])b.facts['religions']={};
+      b.facts['religions'][r.name||"Religion "+r.i]=(r.form||"")+" "+(r.type||"religion")+(r.deity?" — deity: "+r.deity:"");
+    });
+    await this.saveBible(wid,b);
+    // Cross-reference: for each burg topic, add tags for its state, culture, religion
+    const locTopics=await this.listTopics(wid,"locations");
+    for(const t of locTopics){
+      if(t.source!=="azgaar")continue;
+      const burgId=parseInt((t.id.match(/\d+$/)||["0"])[0]);
+      const burg=burgs[burgId];if(!burg)continue;
+      const newTags=[...t.tags];
+      if(burg.state&&sN[burg.state])newTags.push(sN[burg.state]);
+      if(burg.culture&&cN[burg.culture])newTags.push(cN[burg.culture]);
+      if(burg.religion&&rN[burg.religion])newTags.push(rN[burg.religion]);
+      // Add biome if available
+      if(burg.capital)newTags.push("capital");
+      if(burg.port)newTags.push("port");
+      const merged={...t,tags:normTags(newTags)};
+      if(merged.tags.length!==t.tags.length){await this.saveTopic(merged);enriched++;}
+    }
+    // Cross-ref: state topics get tags for their burgs
+    const polTopics=await this.listTopics(wid,"politics");
+    for(const t of polTopics){
+      if(t.source!=="azgaar")continue;
+      const stateId=parseInt((t.id.match(/\d+$/)||["0"])[0]);
+      const stateBurgs=burgs.filter(b=>b&&b.state===stateId&&b.name);
+      const newTags=[...t.tags];
+      stateBurgs.slice(0,10).forEach(b=>newTags.push(b.name));
+      // Add diplomatic tags
+      const s=states[stateId];
+      if(s&&s.diplomacy){s.diplomacy.forEach((d,i)=>{
+        if(i>0&&d&&d!=="x"&&d!=="Neutral"&&sN[i])newTags.push(sN[i]);
+      });}
+      const merged={...t,tags:normTags(newTags)};
+      if(merged.tags.length!==t.tags.length){await this.saveTopic(merged);enriched++;}
+    }
+    return{enriched};
+  },
+  // Export
+  async exportAll(){const data={version:"worldforge-v5",exported:new Date().toISOString(),worlds:[],bibles:[],chats:[],topics:[],generalChats:[],mapData:[]};const ws=await this.listWorlds();for(const w of ws){data.worlds.push(w);data.bibles.push({wid:w.id,...(await this.getBible(w.id))});for(const asp of ASPECTS){const cs=await this.listChats(w.id,asp.id);for(const ch of cs){const f=await this.loadChat(w.id,asp.id,ch.id);if(f)data.chats.push(f);}const tps=await this.listTopics(w.id,asp.id);for(const t of tps)data.topics.push(t);}const wgc=await this.listChats(w.id,"__worldchat__");for(const ch of wgc){const f=await this.loadChat(w.id,"__worldchat__",ch.id);if(f)data.chats.push(f);}const svg=await this.getMapSvg(w.id);const pack=await this.getMapPack(w.id);if(svg||pack)data.mapData.push({wid:w.id,svg:svg||null,pack:pack||null});}const gc=await this.listGeneralChats();for(const ch of gc){const f=await this.loadChat("__general__","__general__",ch.id);if(f)data.generalChats.push(f);}return data;},
+  async importAll(data){let ct={worlds:0,chats:0,topics:0};for(const w of data.worlds||[]){await IDB.set("world:"+w.id,w);ct.worlds++;}for(const b of data.bibles||[]){const wid=b.wid||b.world_id;if(wid)await IDB.set("bible:"+wid,b);}for(const c of data.chats||[]){await IDB.set("chat:"+c.world_id+":"+c.aspect_id+":"+c.id,c);ct.chats++;}for(const c of data.generalChats||[]){await IDB.set("chat:__general__:__general__:"+c.id,c);ct.chats++;}for(const t of data.topics||[]){await IDB.set("topic:"+t.world_id+":"+t.aspect_id+":"+t.id,t);ct.topics++;}for(const m of data.mapData||[]){if(m.svg)await this.saveMapSvg(m.wid,m.svg);if(m.pack)await this.saveMapPack(m.wid,m.pack);}return ct;},
+  async getApiKey(){return IDB.get("_apikey");},async setApiKey(k){return IDB.set("_apikey",k);},
+  async getProvider(){return(await IDB.get("_provider"))||"claude";},async setProvider(p){return IDB.set("_provider",p);},
+  async getCustomEndpoint(){return(await IDB.get("_custom_endpoint"))||"";},async setCustomEndpoint(u){return IDB.set("_custom_endpoint",u);},
 };
 
 // === Multi-Provider AI ===
-window.aiCall=async function(sys,msgs,mt){mt=mt||1500;const key=await db.getApiKey();if(!key)return”[No API key.]”;const prov=await db.getProvider();
-try{if(prov===“deepseek”){const r=await fetch(“https://api.deepseek.com/chat/completions”,{method:“POST”,headers:{“Content-Type”:“application/json”,“Authorization”:“Bearer “+key},body:JSON.stringify({model:“deepseek-chat”,max_tokens:mt,messages:[{role:“system”,content:sys},…msgs.map(m=>({role:m.role,content:m.content}))]})});if(!r.ok){const e=await r.json().catch(()=>({}));return”DeepSeek error: “+(e.error?.message||r.statusText);}const d=await r.json();return d.choices?.[0]?.message?.content||“No response.”;}
-if(prov===“custom”){const ep=await db.getCustomEndpoint();if(!ep)return”[No custom endpoint.]”;const r=await fetch(ep,{method:“POST”,headers:{“Content-Type”:“application/json”,“Authorization”:“Bearer “+key},body:JSON.stringify({model:“default”,max_tokens:mt,messages:[{role:“system”,content:sys},…msgs.map(m=>({role:m.role,content:m.content}))]})});if(!r.ok)return”Custom API error “+r.status;const d=await r.json();return d.choices?.[0]?.message?.content||d.content?.[0]?.text||“No response.”;}
-const r=await fetch(“https://api.anthropic.com/v1/messages”,{method:“POST”,headers:{“Content-Type”:“application/json”,“x-api-key”:key,“anthropic-version”:“2023-06-01”,“anthropic-dangerous-direct-browser-access”:“true”},body:JSON.stringify({model:“claude-sonnet-4-20250514”,max_tokens:mt,system:sys,messages:msgs.map(m=>({role:m.role,content:m.content}))})});if(!r.ok){const e=await r.json().catch(()=>({}));return”Claude error: “+(e.error?.message||r.statusText);}const d=await r.json();return d.content?.map(b=>b.text||””).join(””)||“No response.”;}catch(e){const msg=e.message||””;if(msg.includes(“Failed to fetch”)||msg.includes(“NetworkError”)||msg.includes(“blocked”)||msg.includes(“CORS”))return”Network error — API request may be blocked by your browser’s tracker/ad blocker (Brave Shields, DuckDuckGo Protection, etc). Try disabling protection for this site, or switch to Safari/Chrome.”;return”Error: “+msg;}};
+window.aiCall=async function(sys,msgs,mt){mt=mt||1500;const key=await db.getApiKey();if(!key)return"[No API key.]";const prov=await db.getProvider();
+try{if(prov==="deepseek"){const r=await fetch("https://api.deepseek.com/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:"deepseek-chat",max_tokens:mt,messages:[{role:"system",content:sys},...msgs.map(m=>({role:m.role,content:m.content}))]})});if(!r.ok){const e=await r.json().catch(()=>({}));return"DeepSeek error: "+(e.error?.message||r.statusText);}const d=await r.json();return d.choices?.[0]?.message?.content||"No response.";}
+if(prov==="custom"){const ep=await db.getCustomEndpoint();if(!ep)return"[No custom endpoint.]";const r=await fetch(ep,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:"default",max_tokens:mt,messages:[{role:"system",content:sys},...msgs.map(m=>({role:m.role,content:m.content}))]})});if(!r.ok)return"Custom API error "+r.status;const d=await r.json();return d.choices?.[0]?.message?.content||d.content?.[0]?.text||"No response.";}
+const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:mt,system:sys,messages:msgs.map(m=>({role:m.role,content:m.content}))})});if(!r.ok){const e=await r.json().catch(()=>({}));return"Claude error: "+(e.error?.message||r.statusText);}const d=await r.json();return d.content?.map(b=>b.text||"").join("")||"No response.";}catch(e){const msg=e.message||"";if(msg.includes("Failed to fetch")||msg.includes("NetworkError")||msg.includes("blocked")||msg.includes("CORS"))return"Network error — API request may be blocked by your browser's tracker/ad blocker (Brave Shields, DuckDuckGo Protection, etc). Try disabling protection for this site, or switch to Safari/Chrome.";return"Error: "+msg;}};
 
 // Prompts
-window.buildExtractPrompt=function(aspect){return CAT_RULES+’\n\nExtract for “’+aspect.id+’” category. ‘+aspect.topicPrompt+’.\nFor EACH entity: {“name”,“brief”,“tags”:[2-5]’+(aspect.id===“history”?’,“hist_type”:“battle|death|revolution|birth|nation-formation|tech-advancement|treaty|disaster|general”,“year”:number_or_null’:’,"year":number_or_null’)+’}\nReturn ONLY a JSON array. If nothing found: []’;};
-window.buildLorePrompt=function(name,wn){return’Compile ALL information about “’+name+’” in “’+wn+’” from the text below into comprehensive prose paragraphs. Include every detail mentioned. Only use provided text.’;};
+window.buildExtractPrompt=function(aspect){return CAT_RULES+'\n\nExtract for "'+aspect.id+'" category. '+aspect.topicPrompt+'.\nFor EACH entity: {"name","brief","tags":[2-5]'+(aspect.id==="history"?',"hist_type":"battle|death|revolution|birth|nation-formation|tech-advancement|treaty|disaster|general","year":number_or_null':',\"year\":number_or_null')+'}\nReturn ONLY a JSON array. If nothing found: []';};
+window.buildLorePrompt=function(name,wn){return'Compile ALL information about "'+name+'" in "'+wn+'" from the text below into comprehensive prose paragraphs. Include every detail mentioned. Only use provided text.';};
 
-if(‘serviceWorker’ in navigator){navigator.serviceWorker.register(‘sw.js’).catch(()=>{});}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+// Show something if Babel/React fails to load
+setTimeout(()=>{if(!document.getElementById('root').children.length)document.getElementById('root').innerHTML='<div style="color:#c8a24e;padding:30px;font-family:sans-serif"><h3>WorldForge</h3><p style="color:#aaa;margin-top:12px">Loading failed. Possible causes:</p><ul style="color:#888;margin-top:8px;line-height:2"><li>Browser blocked CDN scripts (check tracker/ad blocker)</li><li>No internet on first load (CDN scripts needed)</li><li>Try Safari or Chrome</li></ul></div>';},5000);
 </script>
-
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useCallback,useRef}=React;
 const ASPECTS=window.ASPECTS,MAX_WORLDS=window.MAX_WORLDS,db=window.db,aiCall=window.aiCall;
@@ -944,6 +939,5 @@ function App(){
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
-
 </body>
 </html>
