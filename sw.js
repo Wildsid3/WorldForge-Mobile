@@ -1,4 +1,4 @@
-const CACHE = 'worldforge-v8';
+const CACHE = 'worldforge-v9';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', e => {
@@ -15,9 +15,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Always go to network for API calls
   if (url.hostname === 'api.anthropic.com') return;
-  // CDN resources - network first, cache fallback
+  if (url.hostname === 'api.deepseek.com') return;
   if (url.hostname !== location.hostname) {
     e.respondWith(
       fetch(e.request).then(r => {
@@ -28,7 +27,6 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // Local assets - cache first
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
       const clone = resp.clone();
