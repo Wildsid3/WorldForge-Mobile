@@ -170,29 +170,30 @@ const CAT_RULES=`CATEGORY RULES - follow strictly:
 CRITICAL: ONLY extract entities EXPLICITLY named in the text. NEVER invent from general knowledge. When uncertain, EXCLUDE.
 TIMELINE: If any dates or years are mentioned alongside entities, include "year" field in your response.`;
 window.ASPECTS=[
-  {id:"characters",name:"Characters",icon:"\u{1f464}",topicType:"character",topicPrompt:"List every character name mentioned"},
-  {id:"cultures",name:"Cultures",icon:"\u{1f3db}\ufe0f",topicType:"entity",topicPrompt:"List every culture or civilization mentioned"},
-  {id:"history",name:"History",icon:"\u{1f4dc}",topicType:"event",topicPrompt:"List every historical event or era mentioned"},
-  {id:"geography",name:"Geography",icon:"\u{1f5fa}\ufe0f",topicType:"location",topicPrompt:"List every location or landmark mentioned"},
-  {id:"magic-technology",name:"Magic / Technology",icon:"\u2728",topicType:"system",topicPrompt:"List every magic system or technology mentioned"},
-  {id:"politics",name:"Politics",icon:"\u2696\ufe0f",topicType:"entity",topicPrompt:"List every political entity mentioned"},
-  {id:"religion-beliefs",name:"Religion & Beliefs",icon:"\u{1f56f}\ufe0f",topicType:"entity",topicPrompt:"List every religion or deity mentioned"},
-  {id:"languages",name:"Languages",icon:"\u{1f524}",topicType:"entity",topicPrompt:"List every language mentioned"},
-  {id:"economy",name:"Economy",icon:"\u{1f4b0}",topicType:"entity",topicPrompt:"List every economic system mentioned"},
-  {id:"story-elements",name:"Story Elements",icon:"\u{1f4d6}",topicType:"entity",topicPrompt:"List every plot thread mentioned"},
-  {id:"cosmology",name:"Cosmology & Creation",icon:"\u{1f30c}",topicType:"entity",topicPrompt:"List every cosmic entity mentioned"},
-  {id:"flora-fauna",name:"Flora & Fauna",icon:"\u{1f33f}",topicType:"entity",topicPrompt:"List every creature or species mentioned"},
-  {id:"organizations",name:"Organizations & Factions",icon:"\u{1f3f4}",topicType:"entity",topicPrompt:"List every faction mentioned"},
-  {id:"calendar-time",name:"Calendar & Time",icon:"\u{1f4c5}",topicType:"entity",topicPrompt:"List every calendar or festival mentioned"},
-  {id:"arts-entertainment",name:"Arts & Entertainment",icon:"\u{1f3ad}",topicType:"entity",topicPrompt:"List every art form mentioned"},
-  {id:"food-cuisine",name:"Food & Cuisine",icon:"\u{1f37d}\ufe0f",topicType:"entity",topicPrompt:"List every dish or tradition mentioned"},
-  {id:"fashion",name:"Fashion & Appearance",icon:"\u{1f458}",topicType:"entity",topicPrompt:"List every clothing style mentioned"},
-  {id:"architecture",name:"Architecture",icon:"\u{1f3f0}",topicType:"entity",topicPrompt:"List every building or style mentioned"},
-  {id:"military",name:"Military & Warfare",icon:"\u2694\ufe0f",topicType:"entity",topicPrompt:"List every army or battle mentioned"},
-  {id:"transportation",name:"Transportation & Trade",icon:"\u{1f6a2}",topicType:"entity",topicPrompt:"List every trade route mentioned"},
-  {id:"education",name:"Education & Knowledge",icon:"\u{1f4da}",topicType:"entity",topicPrompt:"List every school mentioned"},
-  {id:"healthcare",name:"Healthcare & Medicine",icon:"\u{1f3e5}",topicType:"entity",topicPrompt:"List every medical practice mentioned"},
-  {id:"notable-locations",name:"Notable Locations",icon:"\u{1f4cd}",topicType:"location",topicPrompt:"List every named place mentioned"},
+{id:"characters",name:"Characters",icon:"\u{1f464}",topicPrompt:"List every named character mentioned"},
+{id:"locations",name:"Locations",icon:"\u{1f3d8}\ufe0f",topicPrompt:"List every named place, city, town, village, region mentioned"},
+{id:"notable-locations",name:"Notable Locations",icon:"\u{1f4cd}",topicPrompt:"List every location of narrative significance"},
+{id:"cultures",name:"Cultures",icon:"\u{1f3db}\ufe0f",topicPrompt:"List every culture or civilization mentioned"},
+{id:"history",name:"History",icon:"\u{1f4dc}",topicPrompt:"List every historical event mentioned. Include year if stated."},
+{id:"geography",name:"Geography",icon:"\u{1f5fa}\ufe0f",topicPrompt:"List every physical landscape feature mentioned"},
+{id:"politics",name:"Politics",icon:"\u2696\ufe0f",topicPrompt:"List every political entity or government mentioned"},
+{id:"religion-beliefs",name:"Religion & Beliefs",icon:"\u{1f56f}\ufe0f",topicPrompt:"List every religion or faith system mentioned"},
+{id:"organizations",name:"Organizations",icon:"\u{1f3f4}",topicPrompt:"List every organized group mentioned"},
+{id:"military",name:"Military & Warfare",icon:"\u2694\ufe0f",topicPrompt:"List every military force mentioned"},
+{id:"magic-technology",name:"Magic / Technology",icon:"\u2728",topicPrompt:"List every magic system or technology mentioned"},
+{id:"economy",name:"Economy",icon:"\u{1f4b0}",topicPrompt:"List every economic system mentioned"},
+{id:"languages",name:"Languages",icon:"\u{1f524}",topicPrompt:"List every language mentioned"},
+{id:"flora-fauna",name:"Flora & Fauna",icon:"\u{1f33f}",topicPrompt:"List every creature or species mentioned"},
+{id:"story-elements",name:"Story Elements",icon:"\u{1f4d6}",topicPrompt:"List every plot thread mentioned"},
+{id:"cosmology",name:"Cosmology",icon:"\u{1f30c}",topicPrompt:"List every cosmic entity mentioned"},
+{id:"calendar-time",name:"Calendar & Time",icon:"\u{1f4c5}",topicPrompt:"List every calendar or festival mentioned"},
+{id:"arts-entertainment",name:"Arts & Entertainment",icon:"\u{1f3ad}",topicPrompt:"List every art form mentioned"},
+{id:"food-cuisine",name:"Food & Cuisine",icon:"\u{1f37d}\ufe0f",topicPrompt:"List every dish mentioned"},
+{id:"fashion",name:"Fashion",icon:"\u{1f458}",topicPrompt:"List every clothing style mentioned"},
+{id:"architecture",name:"Architecture",icon:"\u{1f3f0}",topicPrompt:"List every building mentioned"},
+{id:"transportation",name:"Transportation",icon:"\u{1f6a2}",topicPrompt:"List every transport system mentioned"},
+{id:"education",name:"Education",icon:"\u{1f4da}",topicPrompt:"List every school mentioned"},
+{id:"healthcare",name:"Healthcare",icon:"\u{1f3e5}",topicPrompt:"List every medical practice mentioned"},
 ];
 window.MAX_WORLDS=10;
 
@@ -382,6 +383,8 @@ function App(){
   const[hasKey,setHasKey]=useState(false);
   const[hasMapData,setHasMapData]=useState(false);
   const[mapSvg,setMapSvg]=useState(null);
+  const[mapLayers,setMapLayers]=useState({});
+  const[showLayers,setShowLayers]=useState(false);
   const endRef=useRef(null);
 
   const flash=(m)=>{setToast(m);setTimeout(()=>setToast(""),2500);};
@@ -672,8 +675,31 @@ function App(){
     </div>
   </>);
 
+  // === MAP VIEWER with layers ===
+  const ALWAYS_ON=new Set(['viewbox']);
+  const DEFAULT_ON=new Set(['viewbox','rivers','regions','borders','routes','ice','icons','labels','vignette','ocean','lakes','landmass','coastline']);
+  const MAP_PRESETS={political:['ocean','lakes','landmass','coastline','rivers','borders','regions','labels','icons','markers','routes','zones','terrs'],physical:['ocean','lakes','landmass','coastline','rivers','borders','labels','icons','markers','terrs'],religious:['ocean','lakes','landmass','coastline','rivers','relig','borders','labels','icons'],cultural:['ocean','lakes','landmass','coastline','rivers','cults','borders','labels','icons'],provinces:['ocean','lakes','landmass','coastline','rivers','provs','borders','labels','icons'],biomes:['ocean','lakes','landmass','coastline','rivers','biomes','labels','icons'],military:['ocean','lakes','landmass','coastline','rivers','borders','regions','armies','labels','icons']};
+  const applyMapPreset=(preset)=>{
+    const show=new Set(MAP_PRESETS[preset]||[]);ALWAYS_ON.forEach(id=>show.add(id));
+    const svg=document.querySelector('.map-container svg');if(!svg)return;
+    const groups={};
+    const scan=(p,d)=>{if(d>2)return;p.querySelectorAll(':scope > g').forEach(g=>{const id=g.id;if(id&&id.length>=2)groups[id]=g;});};
+    scan(svg,0);svg.querySelectorAll(':scope > g').forEach(g=>scan(g,1));
+    const newLayers={};Object.entries(groups).forEach(([id,el])=>{
+      const vis=show.size===0||show.has(id)||ALWAYS_ON.has(id);
+      el.style.display=vis?'':'none';newLayers[id]=vis;});
+    setMapLayers(newLayers);
+  };
+  const toggleMapLayer=(id)=>{if(ALWAYS_ON.has(id))return;
+    const svg=document.querySelector('.map-container svg');if(!svg)return;
+    const el=svg.querySelector('#'+id)||svg.querySelector(':scope > g#'+id);
+    if(!el){svg.querySelectorAll(':scope > g').forEach(g=>{const sub=g.querySelector('#'+id);if(sub){const vis=sub.style.display==='none';sub.style.display=vis?'':'none';setMapLayers(p=>({...p,[id]:vis}));}});}
+    else{const vis=el.style.display==='none';el.style.display=vis?'':'none';setMapLayers(p=>({...p,[id]:vis}));}
+  };
+
   if(scr==="mapview"&&mapSvg)return S(<>
-    <Hdr title="Map" subtitle={cW?.name} onBack={()=>setScr("world")}/>
+    <Hdr title="Map" subtitle={cW?.name} onBack={()=>{setShowLayers(false);setScr("world");}}
+      right={<Btn sm v="s" onClick={()=>setShowLayers(!showLayers)}>{showLayers?"Map":"Layers"}</Btn>}/>
     <div style={{flex:1,position:"relative",overflow:"hidden",background:"#e8ecf0",touchAction:"none"}}
       ref={el=>{if(el&&!el._init&&mapSvg){el._init=true;
         el.innerHTML='<div class="map-container" style="position:absolute;top:0;left:0;transform-origin:0 0">'+mapSvg+'</div>';
@@ -682,9 +708,17 @@ function App(){
           if(vb){const p=vb.split(/[\s,]+/).map(Number);if(p.length===4){sw=p[2];sh=p[3];}}
           svg.setAttribute('width',sw);svg.setAttribute('height',sh);svg.style.width=sw+'px';svg.style.height=sh+'px';
           const vbg=svg.querySelector('#viewbox');if(vbg)vbg.style.display='';
-          const r=el.getBoundingClientRect(),s=Math.min(r.width/sw,r.height/sh)*0.9;
+          const r=el.getBoundingClientRect(),s=Math.min(r.width/sw,r.height/sh)*0.95;
           const ox=(r.width-sw*s)/2,oy=(r.height-sh*s)/2;
           mc.style.transform='translate('+ox+'px,'+oy+'px) scale('+s+')';
+          // Apply default layers
+          const groups={};const scan=(p,d)=>{if(d>2)return;p.querySelectorAll(':scope > g').forEach(g=>{const id=g.id;if(id&&id.length>=2)groups[id]=g;});};
+          scan(svg,0);svg.querySelectorAll(':scope > g').forEach(g=>scan(g,1));
+          const initLayers={};Object.entries(groups).forEach(([id,gel])=>{
+            if(ALWAYS_ON.has(id)){gel.style.display='';initLayers[id]=true;}
+            else{const vis=DEFAULT_ON.has(id);gel.style.display=vis?'':'none';initLayers[id]=vis;}});
+          setMapLayers(initLayers);
+          // Touch pan/pinch
           let z=s,px=ox,py=oy,td=0;
           el.ontouchstart=e=>{if(e.touches.length===2){const dx=e.touches[1].clientX-e.touches[0].clientX,dy=e.touches[1].clientY-e.touches[0].clientY;td=Math.hypot(dx,dy);}};
           el.ontouchmove=e=>{e.preventDefault();
@@ -692,14 +726,35 @@ function App(){
               px+=t.clientX-el._lx;py+=t.clientY-el._ly;el._lx=t.clientX;el._ly=t.clientY;mc.style.transform='translate('+px+'px,'+py+'px) scale('+z+')';}
             if(e.touches.length===2){const dx=e.touches[1].clientX-e.touches[0].clientX,dy=e.touches[1].clientY-e.touches[0].clientY,dist=Math.hypot(dx,dy);
               if(td){const f=dist/td,nz=Math.max(.01,Math.min(100,z*f)),cx=(e.touches[0].clientX+e.touches[1].clientX)/2-r.left,cy=(e.touches[0].clientY+e.touches[1].clientY)/2-r.top;
-                const mx=(cx-px)/z,my=(cy-py)/z;px=cx-mx*nz;py=cy-my*nz;z=nz;mc.style.transform='translate('+px+'px,'+py+'px) scale('+z+')';}td=dist;}};
+                const mx2=(cx-px)/z,my2=(cy-py)/z;px=cx-mx2*nz;py=cy-my2*nz;z=nz;mc.style.transform='translate('+px+'px,'+py+'px) scale('+z+')';}td=dist;}};
           el.ontouchend=()=>{el._lx=null;el._ly=null;};
+          // Mouse for desktop testing
           let md=false,mx0=0,my0=0;
           el.onmousedown=e=>{md=true;mx0=e.clientX;my0=e.clientY;};
           el.onmousemove=e=>{if(!md)return;px+=e.clientX-mx0;py+=e.clientY-my0;mx0=e.clientX;my0=e.clientY;mc.style.transform='translate('+px+'px,'+py+'px) scale('+z+')';};
           el.onmouseup=()=>md=false;el.onmouseleave=()=>md=false;
+          el.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY<0?1.15:1/1.15;const nz=Math.max(.01,Math.min(100,z*f));
+            const cx2=e.clientX-r.left,cy2=e.clientY-r.top,mx3=(cx2-px)/z,my3=(cy2-py)/z;
+            px=cx2-mx3*nz;py=cy2-my3*nz;z=nz;mc.style.transform='translate('+px+'px,'+py+'px) scale('+z+')';},{passive:false});
         }}}}>
     </div>
+    {/* Layer panel - slides up from bottom */}
+    {showLayers&&<div style={{position:"absolute",bottom:0,left:0,right:0,maxHeight:"50%",background:T.sf,borderTop:"2px solid "+T.gold,borderRadius:"16px 16px 0 0",overflowY:"auto",zIndex:20,padding:"12px 16px 20px"}}>
+      <div style={{fontSize:11,fontWeight:600,color:T.gold,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Presets</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:12}}>
+        {[["Political","political"],["Physical","physical"],["Religious","religious"],["Cultural","cultural"],["Provinces","provinces"],["Biomes","biomes"],["Military","military"],["Show All",null]].map(([label,key])=>
+          <button key={label} onClick={()=>{if(key)applyMapPreset(key);else{const svg=document.querySelector('.map-container svg');if(svg){const g={};const sc=(p,d)=>{if(d>2)return;p.querySelectorAll(':scope > g').forEach(el=>{if(el.id&&el.id.length>=2){el.style.display='';g[el.id]=true;}});};sc(svg,0);svg.querySelectorAll(':scope > g').forEach(el=>sc(el,1));setMapLayers(g);}}}}
+            style={{padding:"5px 10px",fontSize:11,background:T.bg,border:"1px solid "+T.bd,borderRadius:4,color:T.txM,cursor:"pointer"}}>{label}</button>)}
+      </div>
+      <div style={{fontSize:11,fontWeight:600,color:T.gold,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Layers ({Object.keys(mapLayers).filter(id=>!ALWAYS_ON.has(id)).length})</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"2px 12px"}}>
+        {Object.keys(mapLayers).filter(id=>!ALWAYS_ON.has(id)).sort().map(id=>(
+          <label key={id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",cursor:"pointer",fontSize:12,color:mapLayers[id]?T.txM:T.txD}}>
+            <input type="checkbox" checked={!!mapLayers[id]} onChange={()=>toggleMapLayer(id)} style={{accentColor:T.gold,width:14,height:14}}/>
+            <span>{id}</span>
+          </label>))}
+      </div>
+    </div>}
   </>);
 
   if(scr==="general")return S(<>
