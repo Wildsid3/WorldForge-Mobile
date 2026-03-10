@@ -28,7 +28,7 @@ input,textarea,button{font-family:inherit}
 // === IndexedDB ===
 const IDB={
   _db:null,
-  open(){return new Promise((res,rej)=>{if(this._db)return res(this._db);const r=indexedDB.open('worldforge',2);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');};r.onsuccess=e=>{this._db=e.target.result;res(this._db);};r.onerror=e=>rej(e);});},
+  open(){return new Promise((res,rej)=>{if(this._db)return res(this._db);const r=indexedDB.open('worldforge',3);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');};r.onsuccess=e=>{this._db=e.target.result;res(this._db);};r.onerror=e=>rej(e);});},
   async get(k){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readonly').objectStore('kv').get(k);t.onsuccess=()=>res(t.result===undefined?null:t.result);t.onerror=e=>rej(e);});},
   async set(k,v){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite').objectStore('kv').put(v,k);t.onsuccess=()=>res(true);t.onerror=e=>rej(e);});},
   async del(k){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite').objectStore('kv').delete(k);t.onsuccess=()=>res(true);t.onerror=e=>rej(e);});},
@@ -514,7 +514,7 @@ function App(){
     <div style={{padding:"20px 20px 0"}}>
       <div style={{fontSize:13,fontWeight:600,color:T.gold,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>API Key</div>
       <div style={{fontSize:12,color:T.txD,marginBottom:10,lineHeight:1.5}}>Required for AI features. Get yours at console.anthropic.com</div>
-      <input type="password" value={apiKeyInput} onChange={e=>setApiKeyInput(e.target.value)} placeholder="sk-ant-api03-..." style={{...iS,fontFamily:"monospace",fontSize:13}}/>
+      <input type="text" autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" value={apiKeyInput} onChange={e=>setApiKeyInput(e.target.value)} onInput={e=>setApiKeyInput(e.target.value)} onPaste={e=>{setTimeout(()=>setApiKeyInput(e.target.value),0);}} placeholder="sk-ant-api03-..." style={{...iS,fontFamily:"monospace",fontSize:13,WebkitTextSecurity:"disc"}}/>
       <div style={{display:"flex",gap:8,marginTop:10}}>
         <Btn full onClick={saveSettings}>{hasKey?"Update":"Save Key"}</Btn>
         {hasKey&&<Btn v="s" onClick={async()=>{setApiKeyInput("");await db.setApiKey(null);setApiKey("");setHasKey(false);flash("Key removed");}}>Remove</Btn>}
