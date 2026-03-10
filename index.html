@@ -26,8 +26,8 @@ input,textarea,button{font-family:inherit}
 </head>
 <body>
 <div id="root"></div>
+<script>window.onerror=function(msg,src,line){document.getElementById('root').innerHTML='<div style="color:#e88;padding:20px;font-family:monospace;font-size:13px;white-space:pre-wrap"><b>Error:</b> '+msg+'\nLine: '+line+'\nSrc: '+(src||'').split('/').pop()+'\n\nDiagnostics:\n  _wfReady: '+!!window._wfReady+'\n  db: '+(typeof window.db)+'\n  aiCall: '+(typeof window.aiCall)+'\n  React: '+(typeof React)+'\n  ASPECTS: '+(window.ASPECTS?window.ASPECTS.length:'missing')+'</div>';};</script>
 <script>
-window.onerror=function(msg,src,line){document.getElementById('root').innerHTML='<div style="color:#e88;padding:20px;font-family:monospace;font-size:13px;white-space:pre-wrap"><b>Error:</b> '+msg+'\nLine: '+line+'\nSrc: '+src+'</div>';};
 // === IDB ===
 const IDB={_db:null,
 open(){return new Promise((r,j)=>{if(this._db)return r(this._db);const q=indexedDB.open('worldforge',3);q.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');};q.onsuccess=e=>{this._db=e.target.result;r(this._db);};q.onerror=e=>j(e);});},
@@ -411,13 +411,18 @@ window.buildExtractPrompt=function(aspect){return CAT_RULES+'\n\nExtract for "'+
 window.buildLorePrompt=function(name,wn){return'Compile ALL information about "'+name+'" in "'+wn+'" from the text below into comprehensive prose paragraphs. Include every detail mentioned. Only use provided text.';};
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+window._wfReady=true;
 // Show something if Babel/React fails to load
-setTimeout(()=>{if(!document.getElementById('root').children.length)document.getElementById('root').innerHTML='<div style="color:#c8a24e;padding:30px;font-family:sans-serif"><h3>WorldForge</h3><p style="color:#aaa;margin-top:12px">Loading failed. Possible causes:</p><ul style="color:#888;margin-top:8px;line-height:2"><li>Browser blocked CDN scripts (check tracker/ad blocker)</li><li>No internet on first load (CDN scripts needed)</li><li>Try Safari or Chrome</li></ul></div>';},5000);
+setTimeout(()=>{if(!document.getElementById('root').children.length)document.getElementById('root').innerHTML='<div style="color:#c8a24e;padding:30px;font-family:sans-serif"><h3>WorldForge</h3><p style="color:#aaa;margin-top:12px">Loading failed. Debug:</p><ul style="color:#888;margin-top:8px;line-height:2"><li>Data layer: '+(window._wfReady?'OK':'FAILED')+'</li><li>window.db: '+(window.db?'OK':'MISSING')+'</li><li>React: '+(typeof React)+'</li><li>Babel: '+(typeof Babel)+'</li></ul><p style="color:#aaa;margin-top:12px">Try: disable tracker/ad blocker, clear site data, use Safari</p></div>';},5000);
 </script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useCallback,useRef}=React;
-const ASPECTS=window.ASPECTS,MAX_WORLDS=window.MAX_WORLDS,db=window.db,aiCall=window.aiCall;
-const TMPL_FOR=window.TMPL_FOR||{};const safeArr=window.safeArr||(v=>Array.isArray(v)?v:[]);
+
+// Lazy access - grab globals when needed, not at parse time
+function getDb(){return window.db;}
+function getAiCall(){return window.aiCall;}
+const ASPECTS=window.ASPECTS||[];const MAX_WORLDS=window.MAX_WORLDS||10;
+const TMPL_FOR=window.TMPL_FOR||{};
 const normTag=window.normTag||(t=>t);const normTags=window.normTags||(a=>a||[]);
 const mkId=window.mkId||(()=>Date.now().toString(36));const buildExtractPrompt=window.buildExtractPrompt;
 
@@ -482,6 +487,12 @@ function Bub({msg}){
 }
 
 function App(){
+  const db=window.db,aiCall=window.aiCall;
+  if(!db)return(<div style={{color:"#e88",padding:30,fontFamily:"monospace"}}>
+    <b>WorldForge failed to initialize.</b><br/>Data layer not loaded.<br/>
+    Try: clear site data, disable ad/tracker blocker, use Safari/Chrome.<br/>
+    window.db={String(typeof window.db)}, ASPECTS={String(window.ASPECTS?.length||0)}
+  </div>);
   const[scr,setScr]=useState("main");
   const[worlds,setWorlds]=useState([]);
   const[cW,setCW]=useState(null);

@@ -1,4 +1,4 @@
-const CACHE = 'worldforge-v7';
+const CACHE = 'worldforge-v8';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', e => {
