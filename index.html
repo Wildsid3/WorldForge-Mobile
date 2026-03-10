@@ -20,6 +20,8 @@ html,body,#root{height:100%;width:100%;overflow:hidden}
 body{background:#0f0f0f;color:#e8e4dc;font-family:'Source Sans 3',sans-serif;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#2a2a32;border-radius:2px}
 input,textarea,button{font-family:inherit}
+.map-container svg{background:transparent;color-scheme:light}
+.map-container svg text{pointer-events:none}
 </style>
 </head>
 <body>
@@ -28,7 +30,7 @@ input,textarea,button{font-family:inherit}
 // === IndexedDB ===
 const IDB={
   _db:null,
-  open(){return new Promise((res,rej)=>{if(this._db)return res(this._db);const r=indexedDB.open('worldforge',3);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');};r.onsuccess=e=>{this._db=e.target.result;res(this._db);};r.onerror=e=>rej(e);});},
+  open(){return new Promise((res,rej)=>{if(this._db)return res(this._db);const r=indexedDB.open('worldforge-mobile',1);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');};r.onsuccess=e=>{this._db=e.target.result;res(this._db);};r.onerror=e=>rej(e);});},
   async get(k){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readonly').objectStore('kv').get(k);t.onsuccess=()=>res(t.result===undefined?null:t.result);t.onerror=e=>rej(e);});},
   async set(k,v){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite').objectStore('kv').put(v,k);t.onsuccess=()=>res(true);t.onerror=e=>rej(e);});},
   async del(k){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite').objectStore('kv').delete(k);t.onsuccess=()=>res(true);t.onerror=e=>rej(e);});},
@@ -36,7 +38,137 @@ const IDB={
   async clear(){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite').objectStore('kv').clear();t.onsuccess=()=>res(true);t.onerror=e=>rej(e);});}
 };
 
+// === Utilities ===
+function normTag(t){return t.toLowerCase().trim().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'');}
+function normTags(a){return[...new Set((a||[]).map(normTag).filter(t=>t.length>0))];}
+function mkId(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);}
+function safeArr(v){if(!v)return[];if(Array.isArray(v))return v;if(typeof v==='object')return Object.values(v);return[];}
+
+// === COA + MFCG ===
+window.coaUrl=function(coa){if(!coa)return null;try{return"https://armoria.herokuapp.com/?coa="+encodeURIComponent(JSON.stringify(coa));}catch(e){return null;}};
+window.mfcgUrl=function(burg,seed){if(!burg)return null;const s=seed||burg.MFCG||burg.i||0;const size=Math.max(1,Math.min(60,Math.round((burg.population||1)*10)));return"https://watabou.github.io/city-generator/?seed="+s+"&size="+size+(burg.port?"&coast=1":"")+(burg.citadel?"&citadel=1":"")+(burg.walls?"&walls=1":"")+(burg.plaza?"&plaza=1":"")+(burg.temple?"&temple=1":"")+(burg.shanty?"&shanty=1":"");};
+
+// === Azgaar Parser ===
+window.parseAzgaarMap=function(text){
+  const R={svg:null,pack:null,params:null,error:null,debug:[]};
+  try{R.debug.push("Size:"+text.length);
+    const ss=text.indexOf('<svg'),se=text.lastIndexOf('</svg>');
+    if(ss<0||se<0){R.error="No SVG";return R;}
+    R.svg=text.substring(ss,se+6);
+    const fl=text.substring(0,ss).split('\n')[0].trim();
+    if(fl.startsWith('{')){try{R.params=JSON.parse(fl);}catch(e){}}
+    const after=text.substring(se+6);
+    const objs=[];let d=0,os=-1;
+    for(let i=0;i<after.length;i++){if(after[i]==='{'){if(d===0)os=i;d++;}else if(after[i]==='}'){d--;if(d===0&&os>=0){objs.push({s:os,e:i+1});os=-1;}}}
+    for(let i=0;i<objs.length;i++){
+      const str=after.substring(objs[i].s,objs[i].e);
+      try{const o=JSON.parse(str);if(o.states||o.burgs||o.cultures){R.pack=o;R.debug.push("Pack at "+i);break;}
+        if(o.cells||o.vertices){continue;}}catch(e){R.debug.push("Obj "+i+" fail");}}
+    if(!R.pack)R.error="Pack not found";
+  }catch(e){R.error=e.message;}
+  return R;
+};
+
+// === Topic Generation from Azgaar Pack ===
+window.generateTopicsFromPack=function(pack,wid,params){
+  const T=[];if(!pack)return T;
+  const states=safeArr(pack.states),burgs=safeArr(pack.burgs),cultures=safeArr(pack.cultures),
+    religions=safeArr(pack.religions),rivers=safeArr(pack.rivers),military=safeArr(pack.military),
+    provinces=safeArr(pack.provinces),cells=pack.cells||{};
+  const sN={},cN={},rN={};
+  states.forEach(s=>{if(s&&s.i>0)sN[s.i]=s.name||s.fullName||"State "+s.i;});
+  cultures.forEach(c=>{if(c&&c.i>0)cN[c.i]=c.name||"Culture "+c.i;});
+  religions.forEach(r=>{if(r&&r.i>0)rN[r.i]=r.name||"Religion "+r.i;});
+  const biomeNames=["Marine","Hot desert","Cold desert","Savanna","Grassland","Tropical seasonal forest","Temperate deciduous forest","Tropical rainforest","Temperate rainforest","Taiga","Tundra","Glacier","Wetland"];
+  const getBiome=(cellId)=>{if(cells.biome&&cells.biome[cellId]!==undefined){const bi=cells.biome[cellId];return biomeNames[bi]||"Biome "+bi;}return"";};
+  const getElev=(cellId)=>cells.h&&cells.h[cellId]!==undefined?cells.h[cellId]:null;
+  const getTemp=(cellId)=>cells.temp&&cells.temp[cellId]!==undefined?cells.temp[cellId]:null;
+  // States -> politics
+  states.forEach(s=>{
+    if(!s||!s.i||s.i===0||s.removed)return;
+    const cap=s.capital&&burgs[s.capital]?burgs[s.capital]:null;
+    const cult=s.culture?cN[s.culture]||"?":"?";const rel=s.religion?rN[s.religion]||"?":"?";
+    const totalPop=Math.round(((s.rural||0)+(s.urban||0))*1000);
+    const diplo=[];if(s.diplomacy)s.diplomacy.forEach((d,i)=>{if(i>0&&d&&d!=="x"&&d!=="Neutral"&&sN[i])diplo.push(sN[i]+": "+d);});
+    const provs=provinces.filter(p=>p&&p.state===s.i&&p.name).map(p=>p.fullName||p.name);
+    T.push({id:"azg-state-"+s.i,name:s.fullName||s.name,brief:(s.fullName||s.name)+", "+cult+" "+(s.form||"state")+". Pop: "+totalPop.toLocaleString(),
+      template:"system",tags:normTags([s.form||"",cult,"state",s.name]),aspect_id:"politics",world_id:wid,source:"azgaar",
+      coa:s.coa||null,color:s.color||"",born_year:null,died_year:null,timeline:[],
+      fields:{principle:"Government: "+(s.form||"Unknown"),components:["Total population: "+totalPop.toLocaleString(),"Rural: "+Math.round((s.rural||0)*1000).toLocaleString(),"Urban: "+Math.round((s.urban||0)*1000).toLocaleString(),"Area: "+(s.area?Math.round(s.area):"?")+" cells"],
+        practitioners:"Culture: "+cult+"\nReligion: "+rel,effects:"Capital: "+(cap?cap.name:"?")+"\n"+(provs.length?"Provinces: "+provs.join(", "):""),limitations:diplo.length?"Diplomacy:\n"+diplo.join("\n"):"",origin:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});
+  });
+  // Burgs -> locations + notable-locations
+  burgs.forEach(b=>{
+    if(!b||!b.i||b.i===0||!b.name)return;
+    const st=b.state?sN[b.state]||"Unclaimed":"Unclaimed";const cult=b.culture?cN[b.culture]||"?":"?";const rel=b.religion?rN[b.religion]||"?":"?";
+    const pop=Math.round((b.population||0)*1000);const feats=[];
+    if(b.capital)feats.push("Capital");if(b.port)feats.push("Port");if(b.citadel)feats.push("Citadel");if(b.walls)feats.push("Walled");if(b.plaza)feats.push("Market");if(b.temple)feats.push("Temple");if(b.shanty)feats.push("Shantytown");
+    const biome=b.cell?getBiome(b.cell):"";const tags=normTags([st,cult,...feats,b.name,biome]);const mfcg=window.mfcgUrl(b);
+    T.push({id:"azg-loc-"+b.i,name:b.name,brief:b.name+(b.capital?" (capital)":"")+", "+st+". Pop: "+pop.toLocaleString(),
+      template:"location",tags,aspect_id:"locations",world_id:wid,source:"azgaar",
+      coa:b.coa||null,mfcg_url:mfcg,coords:{x:b.x||0,y:b.y||0},born_year:null,died_year:null,timeline:[],
+      fields:{type:feats.length?feats.join(", "):"Settlement",region:st,population:pop.toLocaleString(),government:st,culture:cult,religion:rel,
+        climate:(biome||"")+(getTemp(b.cell)!==null?" ("+getTemp(b.cell)+"\u00b0)":""),resources:"Elevation: "+(getElev(b.cell)!==null?getElev(b.cell):"?"),features:feats,mfcg_url:mfcg},
+      created:new Date().toISOString(),updated:new Date().toISOString()});
+    if(b.capital||feats.length>=2){
+      T.push({id:"azg-notable-"+b.i,name:b.name,brief:b.name+" — "+(b.capital?"Capital of "+st:feats.join(", ")),
+        template:"notable",tags:[...tags,"notable"],aspect_id:"notable-locations",world_id:wid,source:"azgaar",
+        coa:b.coa||null,mfcg_url:mfcg,coords:{x:b.x||0,y:b.y||0},born_year:null,died_year:null,timeline:[],
+        fields:{significance:b.capital?"Capital of "+st:"Notable for "+feats.join(", "),physical_desc:feats.join(", ")+(biome?" in "+biome:""),history_events:"",connected_entities:st+", "+cult,history:"Pop: "+pop.toLocaleString()},
+        created:new Date().toISOString(),updated:new Date().toISOString()});}
+  });
+  // Cultures
+  cultures.forEach(c=>{if(!c||!c.i||c.i===0||c.removed)return;const parent=c.base!==undefined&&cN[c.base]?cN[c.base]:"Indigenous";
+    T.push({id:"azg-culture-"+c.i,name:c.name||"Culture "+c.i,brief:(c.name||"")+" — "+(c.type||"")+" culture",
+      template:"culture",tags:normTags([c.type||"",c.name,"culture"]),aspect_id:"cultures",world_id:wid,source:"azgaar",
+      coa:c.coa||null,born_year:null,died_year:null,timeline:[],
+      fields:{origin:"Type: "+(c.type||"?")+"\nDerived from: "+parent+"\nShield: "+(c.shield||"heater"),values_beliefs:"",customs_practices:"Naming: "+(c.code||"default"),art_expression:"",social_structure:"",language:"",relations:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});});
+  // Religions
+  religions.forEach(r=>{if(!r||!r.i||r.i===0||r.removed)return;const originCult=r.culture!==undefined?cN[r.culture]||"?":"?";
+    T.push({id:"azg-religion-"+r.i,name:r.name||"Religion "+r.i,brief:(r.name||"")+" — "+(r.form||"")+" "+(r.type||"religion")+". Origin: "+originCult,
+      template:"culture",tags:normTags([r.type||"",r.form||"",r.name,"religion"]),aspect_id:"religion-beliefs",world_id:wid,source:"azgaar",
+      born_year:null,died_year:null,timeline:[],
+      fields:{origin:"Type: "+(r.type||"?")+"\nForm: "+(r.form||"?")+"\nOrigin: "+originCult,values_beliefs:r.deity?"Central deity: "+r.deity:"No central deity",customs_practices:"",art_expression:"",social_structure:"",language:"",relations:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});});
+  // Rivers
+  rivers.forEach(rv=>{if(!rv||!rv.i||!rv.name)return;
+    T.push({id:"azg-river-"+rv.i,name:rv.name+(rv.type&&rv.type!=="River"?" ("+rv.type+")":""),brief:rv.name+" — "+(rv.type||"river"),
+      template:"geography",tags:normTags([rv.type||"river",rv.name,"geography"]),aspect_id:"geography",world_id:wid,source:"azgaar",
+      born_year:null,died_year:null,timeline:[],fields:{type:rv.type||"River",scale:"Length: "+(rv.length?Math.round(rv.length):"?"),physical_desc:"",climate_ecology:"Basin: "+(rv.basin||"?"),resources:"",connected:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});});
+  // Military
+  military.forEach((m,idx)=>{if(!m||idx===0)return;const units=safeArr(m);if(!units.length)return;const sn=sN[idx]||"State "+idx;
+    const regs=units.map(r=>(r.name||"Unit")+" ("+(r.type||"?")+": "+(r.n||0)+")").slice(0,15);
+    T.push({id:"azg-mil-"+idx,name:sn+" Armed Forces",brief:"Military of "+sn+" — "+units.length+" regiments",
+      template:"system",tags:normTags([sn,"military"]),aspect_id:"military",world_id:wid,source:"azgaar",
+      born_year:null,died_year:null,timeline:[],fields:{principle:sn+" military forces",composition:regs,command:sn,doctrine:"",campaigns:[],strengths:"Total: "+units.length+" regiments",limitations:"",origin:""},
+      created:new Date().toISOString(),updated:new Date().toISOString()});});
+  return T;
+};
+
 // === Config ===
+const CARD_TMPL={entity:["characters","organizations"],location:["locations"],notable:["notable-locations","architecture"],system:["magic-technology","politics","economy","languages","education","healthcare","transportation"],culture:["cultures","religion-beliefs","arts-entertainment","food-cuisine","fashion","calendar-time"],event:["history","military","story-elements","cosmology"],creature:["flora-fauna"],geography:["geography"]};
+const TMPL_FOR={};Object.entries(CARD_TMPL).forEach(([t,ids])=>ids.forEach(id=>TMPL_FOR[id]=t));
+window.TMPL_FOR=TMPL_FOR;
+const CAT_RULES=`CATEGORY RULES - follow strictly:
+- characters: Named individuals with agency who act and decide.
+- locations: Every named place (cities, towns, regions, bodies of water).
+- notable-locations: Places with narrative SIGNIFICANCE (capitals, battle sites, holy sites).
+- cultures: Shared identity groups (customs, language, values). NOT political structures.
+- history: Events that HAPPENED. Tag sub-type: battle/death/revolution/birth/nation-formation/tech-advancement/treaty/disaster.
+- politics: Current power structures and governance.
+- religion-beliefs: Faith systems, deities, doctrines, clergy.
+- organizations: Groups with structure (guilds, factions, orders).
+- military: Armed forces, warfare doctrine, standing armies.
+- magic-technology: Systems enabling capabilities.
+- geography: Physical landscape (mountains, rivers, forests, biomes).
+- flora-fauna: Non-person organisms.
+- economy: Trade, currency, resources.
+- languages: Communication systems, scripts.
+CRITICAL: ONLY extract entities EXPLICITLY named in the text. NEVER invent from general knowledge. When uncertain, EXCLUDE.
+TIMELINE: If any dates or years are mentioned alongside entities, include "year" field in your response.`;
 window.ASPECTS=[
   {id:"characters",name:"Characters",icon:"\u{1f464}",topicType:"character",topicPrompt:"List every character name mentioned"},
   {id:"cultures",name:"Cultures",icon:"\u{1f3db}\ufe0f",topicType:"entity",topicPrompt:"List every culture or civilization mentioned"},
@@ -98,16 +230,61 @@ window.db={
   async importAll(data){let ct={worlds:0,chats:0,topics:0};for(const w of data.worlds||[]){await IDB.set("world:"+w.id,w);ct.worlds++;}for(const b of data.bibles||[]){const wid=b.wid||b.world_id;if(wid)await IDB.set("bible:"+wid,b);}for(const c of data.chats||[]){await IDB.set("chat:"+c.world_id+":"+c.aspect_id+":"+c.id,c);ct.chats++;}for(const c of data.generalChats||[]){await IDB.set("chat:__general__:__general__:"+c.id,c);ct.chats++;}for(const t of data.topics||[]){await IDB.set("topic:"+t.world_id+":"+t.aspect_id+":"+t.id,t);ct.topics++;}for(const m of data.mapData||[]){if(m.svg)await this.saveMapSvg(m.wid,m.svg);if(m.pack)await this.saveMapPack(m.wid,m.pack);}return ct;},
   async getApiKey(){return IDB.get("_apikey");},
   async setApiKey(k){return IDB.set("_apikey",k);},
+  async importAzgaarMap(wid,fileText){
+    const parsed=parseAzgaarMap(fileText);if(parsed.error)return{error:parsed.error,debug:parsed.debug};
+    if(parsed.svg)await this.saveMapSvg(wid,parsed.svg);
+    if(parsed.params){const w=await IDB.get("world:"+wid);if(w){
+      if(parsed.params.options?.year)w.current_year=parsed.params.options.year;
+      if(parsed.params.options?.era)w.calendar_name=parsed.params.options.era;
+      await this.saveWorld(w);}}
+    if(parsed.pack){await this.saveMapPack(wid,parsed.pack);
+      const topics=generateTopicsFromPack(parsed.pack,wid,parsed.params);
+      let added=0;for(const t of topics){const ex=await IDB.get("topic:"+wid+":"+t.aspect_id+":"+t.id);if(!ex){await this.saveTopic(t);added++;}else{await this.saveTopic({...ex,fields:{...(ex.fields||{}),...(t.fields||{})},tags:normTags([...(ex.tags||[]),...(t.tags||[])]),coa:t.coa||ex.coa,mfcg_url:t.mfcg_url||ex.mfcg_url,coords:t.coords||ex.coords});}}
+      return{added,total:topics.length,debug:parsed.debug};}
+    return{added:0,total:0,debug:parsed.debug};},
+  async importJsonExport(wid,jsonText){
+    let pack;try{pack=JSON.parse(jsonText);}catch(e){return{error:"Invalid JSON"};}
+    if(pack.pack)pack=pack.pack;if(!pack.states&&!pack.burgs)return{error:"No states/burgs. Keys: "+Object.keys(pack).slice(0,10).join(",")};
+    await this.saveMapPack(wid,pack);
+    const topics=generateTopicsFromPack(pack,wid);
+    let added=0;for(const t of topics){const ex=await IDB.get("topic:"+wid+":"+t.aspect_id+":"+t.id);if(!ex){await this.saveTopic(t);added++;}else{await this.saveTopic({...ex,fields:{...(ex.fields||{}),...(t.fields||{})},tags:normTags([...(ex.tags||[]),...(t.tags||[])]),coa:t.coa||ex.coa,mfcg_url:t.mfcg_url||ex.mfcg_url,coords:t.coords||ex.coords});}}
+    return{added,total:topics.length};},
+  async autoEnrichFromPack(wid){
+    const pack=await this.getMapPack(wid);if(!pack)return{enriched:0};
+    const states=safeArr(pack.states),burgs=safeArr(pack.burgs),cultures=safeArr(pack.cultures),religions=safeArr(pack.religions);
+    const sN={},cN={},rN={};
+    states.forEach(s=>{if(s&&s.i>0)sN[s.i]=s.name||s.fullName||"";});
+    cultures.forEach(c=>{if(c&&c.i>0)cN[c.i]=c.name||"";});
+    religions.forEach(r=>{if(r&&r.i>0)rN[r.i]=r.name||"";});
+    let enriched=0;
+    const b=await this.getBible(wid);if(!b.facts)b.facts={};
+    states.forEach(s=>{if(!s||!s.i||s.i===0||s.removed)return;const name=s.fullName||s.name;if(!name)return;
+      if(!b.facts['politics'])b.facts['politics']={};b.facts['politics'][name]=(s.form||"state")+", culture: "+(cN[s.culture]||"?")+", pop: "+Math.round(((s.rural||0)+(s.urban||0))*1000).toLocaleString();});
+    cultures.forEach(c=>{if(!c||!c.i||c.i===0||c.removed)return;if(!b.facts['cultures'])b.facts['cultures']={};b.facts['cultures'][c.name||"Culture "+c.i]=(c.type||"")+" culture";});
+    religions.forEach(r=>{if(!r||!r.i||r.i===0||r.removed)return;if(!b.facts['religions'])b.facts['religions']={};b.facts['religions'][r.name||"Religion "+r.i]=(r.form||"")+" "+(r.type||"religion")+(r.deity?" — deity: "+r.deity:"");});
+    await this.saveBible(wid,b);
+    const locTopics=await this.listTopics(wid,"locations");
+    for(const t of locTopics){if(t.source!=="azgaar")continue;const burgId=parseInt((t.id.match(/\d+$/)||["0"])[0]);const burg=burgs[burgId];if(!burg)continue;
+      const newTags=[...t.tags];if(burg.state&&sN[burg.state])newTags.push(sN[burg.state]);if(burg.culture&&cN[burg.culture])newTags.push(cN[burg.culture]);if(burg.religion&&rN[burg.religion])newTags.push(rN[burg.religion]);
+      if(burg.capital)newTags.push("capital");if(burg.port)newTags.push("port");
+      const merged={...t,tags:normTags(newTags)};if(merged.tags.length!==t.tags.length){await this.saveTopic(merged);enriched++;}}
+    const polTopics=await this.listTopics(wid,"politics");
+    for(const t of polTopics){if(t.source!=="azgaar")continue;const stateId=parseInt((t.id.match(/\d+$/)||["0"])[0]);
+      const stateBurgs=burgs.filter(bg=>bg&&bg.state===stateId&&bg.name);const newTags=[...t.tags];
+      stateBurgs.slice(0,10).forEach(bg=>newTags.push(bg.name));
+      const s=states[stateId];if(s&&s.diplomacy){s.diplomacy.forEach((d,i)=>{if(i>0&&d&&d!=="x"&&d!=="Neutral"&&sN[i])newTags.push(sN[i]);});}
+      const merged={...t,tags:normTags(newTags)};if(merged.tags.length!==t.tags.length){await this.saveTopic(merged);enriched++;}}
+    return{enriched};},
 };
 
-// === AI ===
-window.aiCall=async function(system,messages,maxTokens){
-  maxTokens=maxTokens||1500;const key=await db.getApiKey();
-  if(!key)return"[No API key set. Go to Settings to add your Anthropic API key.]";
-  try{const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:maxTokens,system,messages:messages.map(m=>({role:m.role,content:m.content}))})});
-  if(!r.ok){const e=await r.json().catch(()=>({}));return"API error "+r.status+": "+(e.error?.message||r.statusText);}
-  const data=await r.json();return data.content?.map(b=>b.text||"").join("")||"No response.";}catch(e){return"Network error: "+e.message;}
-};
+// === Multi-Provider AI ===
+window.aiCall=async function(sys,msgs,mt){mt=mt||1500;const key=await db.getApiKey();if(!key)return"[No API key.]";const prov=await db.getProvider();
+try{if(prov==="deepseek"){const r=await fetch("https://api.deepseek.com/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:"deepseek-chat",max_tokens:mt,messages:[{role:"system",content:sys},...msgs.map(m=>({role:m.role,content:m.content}))]})});if(!r.ok){const e=await r.json().catch(()=>({}));return"DeepSeek error: "+(e.error?.message||r.statusText);}const d=await r.json();return d.choices?.[0]?.message?.content||"No response.";}
+if(prov==="custom"){const ep=await db.getCustomEndpoint();if(!ep)return"[No custom endpoint.]";const r=await fetch(ep,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:"default",max_tokens:mt,messages:[{role:"system",content:sys},...msgs.map(m=>({role:m.role,content:m.content}))]})});if(!r.ok)return"Custom API error "+r.status;const d=await r.json();return d.choices?.[0]?.message?.content||d.content?.[0]?.text||"No response.";}
+const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:mt,system:sys,messages:msgs.map(m=>({role:m.role,content:m.content}))})});if(!r.ok){const e=await r.json().catch(()=>({}));return"Claude error: "+(e.error?.message||r.statusText);}const d=await r.json();return d.content?.map(b=>b.text||"").join("")||"No response.";}catch(e){const msg=e.message||"";if(msg.includes("Failed to fetch")||msg.includes("NetworkError")||msg.includes("blocked")||msg.includes("CORS"))return"Network error — API request may be blocked by your browser's tracker/ad blocker (Brave Shields, DuckDuckGo Protection, etc). Try disabling protection for this site.";return"Error: "+msg;}};
+
+// Prompts
+window.buildExtractPrompt=function(aspect){return CAT_RULES+'\n\nExtract for "'+aspect.id+'" category. '+aspect.topicPrompt+'.\nFor EACH entity: {"name","brief","tags":[2-5]'+(aspect.id==="history"?',"hist_type":"battle|death|revolution|birth|nation-formation|tech-advancement|treaty|disaster|general","year":number_or_null':',\"year\":number_or_null')+'}\nReturn ONLY a JSON array. If nothing found: []';};
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
@@ -115,6 +292,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useCallback,useRef}=React;
 const ASPECTS=window.ASPECTS,MAX_WORLDS=window.MAX_WORLDS,db=window.db,aiCall=window.aiCall;
+const TMPL_FOR=window.TMPL_FOR||{};
 
 const T={bg:"#0f0f0f",sf:"#1a1a1e",sfH:"#222228",card:"#1e1e24",bd:"#2a2a32",
   gold:"#c8a24e",goldD:"#8a7030",tx:"#e8e4dc",txD:"#8a8680",txM:"#b8b4ac",red:"#8a3a3a",redTx:"#d46a6a"};
@@ -202,6 +380,8 @@ function App(){
   const[apiKey,setApiKey]=useState("");
   const[apiKeyInput,setApiKeyInput]=useState("");
   const[hasKey,setHasKey]=useState(false);
+  const[hasMapData,setHasMapData]=useState(false);
+  const[mapSvg,setMapSvg]=useState(null);
   const endRef=useRef(null);
 
   const flash=(m)=>{setToast(m);setTimeout(()=>setToast(""),2500);};
@@ -212,9 +392,15 @@ function App(){
   const goMain=()=>{setScr("main");setCW(null);setCA(null);setCC(null);setGen(false);setWorldChat(false);};
   const goWorlds=async()=>{await ldW();setScr("worlds");};
   const goWorld=async(w)=>{setCW(w);setCA(null);setCC(null);setWorldChat(false);setScr("world");
-    const counts={};for(const a of ASPECTS){counts[a.id]=await db.countTopics(w.id,a.id);}setAspTopicCounts(counts);};
+    const counts={};for(const a of ASPECTS){counts[a.id]=await db.countTopics(w.id,a.id);}setAspTopicCounts(counts);
+    setHasMapData(await db.hasMap(w.id));};
   const goAspect=async(a)=>{setCA(a);setCList(await db.listChats(cW.id,a.id));setTopicList(await db.listTopics(cW.id,a.id));setScr("aspect");};
   const goTopicDetail=t=>{setCurTopic(t);setScr("topicdetail");};
+  const goMap=async()=>{if(!cW)return;const svg=await db.getMapSvg(cW.id);setMapSvg(svg);setScr("mapview");};
+  const onMapImport=async(e,type)=>{const f=e.target.files[0];if(!f||!cW)return;e.target.value="";setBusy(true);
+    if(type==="svg"){await db.saveMapSvg(cW.id,await f.text());setHasMapData(true);flash("Map loaded!");setBusy(false);return;}
+    if(type==="json"){flash("Parsing...");const r=await db.importJsonExport(cW.id,await f.text());if(r?.error)flash("Error: "+r.error);else{await db.autoEnrichFromPack(cW.id);flash((r?.added||0)+" topics!");const counts={};for(const a of ASPECTS){counts[a.id]=await db.countTopics(cW.id,a.id);}setAspTopicCounts(counts);}setBusy(false);return;}
+    flash("Parsing .map...");const r=await db.importAzgaarMap(cW.id,await f.text());if(r?.error)flash("Error: "+r.error);else{await db.autoEnrichFromPack(cW.id);flash((r?.added||0)+" topics imported!");setHasMapData(true);const counts={};for(const a of ASPECTS){counts[a.id]=await db.countTopics(cW.id,a.id);}setAspTopicCounts(counts);}setBusy(false);};
   const goChat=async(ch,g=false,wc=false)=>{
     const wid=g?"__general__":cW.id;
     const aid=g?"__general__":(wc?"__worldchat__":cA.id);
@@ -292,10 +478,18 @@ function App(){
     if(!cW||!cA)return;setBusy(true);
     const text=await db.gatherAspectText(cW.id,cA.id);
     if(!text.trim()){setTopics([]);setBusy(false);flash("No chats yet");return;}
-    const sys="You are a data extractor. "+cA.topicPrompt+" from the text.\nReturn ONLY a JSON array: [{\"name\":\"...\",\"brief\":\"...\"}]\nNo preamble.";
-    const resp=await aiCall(sys,[{role:"user",content:text.slice(0,8000)}],1024);
-    try{const c=resp.trim().replace(/^```\w*\n?/,"").replace(/\n?```$/,"");const a=c.match(/\[[\s\S]*\]/);setTopics(a?JSON.parse(a[0]):[]);}
-    catch(e){setTopics([]);flash("Parse error");}
+    const prompt=window.buildExtractPrompt?window.buildExtractPrompt(cA):("You are a data extractor. "+cA.topicPrompt+" from the text.\nReturn ONLY a JSON array: [{\"name\":\"...\",\"brief\":\"...\",\"tags\":[]}]\nNo preamble.");
+    const resp=await aiCall(prompt,[{role:"user",content:text.slice(0,12000)}],2048);
+    try{const c=resp.trim().replace(/^```\w*\n?/,"").replace(/\n?```$/,"");const a=c.match(/\[[\s\S]*\]/);const parsed=a?JSON.parse(a[0]):[];
+      setTopics(parsed);let added=0;
+      for(const p of parsed){const tid="ext-"+normTag(p.name)+"-"+mkId().slice(-4);
+        const existing=topicList.find(t=>t.name===p.name);
+        if(!existing){await db.saveTopic({id:tid,name:p.name,brief:p.brief||"",template:TMPL_FOR[cA.id]||"culture",
+          tags:normTags(p.tags||[]),hist_type:p.hist_type||"general",born_year:p.year||null,died_year:null,
+          timeline:p.year?[{year:p.year,event:p.brief||p.name}]:[],fields:{},aspect_id:cA.id,world_id:cW.id,source:"extracted",
+          created:new Date().toISOString(),updated:new Date().toISOString()});added++;}}
+      if(added)flash(added+" topics saved");setTopicList(await db.listTopics(cW.id,cA.id));
+    }catch(e){setTopics([]);flash("Parse error");}
     setBusy(false);setScr("topics");
   };
 
@@ -384,6 +578,15 @@ function App(){
     <Hdr title={cW.name} subtitle="Select an aspect" onBack={goWorlds} right={<Btn sm v="g" onClick={openBible} style={{fontSize:18,padding:"4px 10px"}}>📖</Btn>}/>
     <div style={{flex:1,overflowY:"auto"}}>
       <Row icon="💬" label="World Chat" detail="Discuss anything — auto-categorized" onClick={goWorldChat}/>
+      {hasMapData&&<Row icon="🗺️" label="View Map" detail="Interactive map" onClick={goMap}/>}
+      <div style={{height:1,background:T.bd,margin:"4px 20px"}}/>
+      <div style={{padding:"8px 20px"}}><div style={{fontSize:11,color:T.goldD,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Import Map Data</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          <label style={{padding:"6px 12px",borderRadius:6,background:T.sf,border:"1px solid "+T.bd,color:T.txM,fontSize:12,cursor:"pointer"}}>📄 .map<input type="file" accept="*/*" style={{display:"none"}} onChange={e=>onMapImport(e,"map")}/></label>
+          <label style={{padding:"6px 12px",borderRadius:6,background:T.sf,border:"1px solid "+T.bd,color:T.txM,fontSize:12,cursor:"pointer"}}>🗺️ .svg<input type="file" accept=".svg,image/svg+xml" style={{display:"none"}} onChange={e=>onMapImport(e,"svg")}/></label>
+          <label style={{padding:"6px 12px",borderRadius:6,background:T.sf,border:"1px solid "+T.bd,color:T.txM,fontSize:12,cursor:"pointer"}}>📊 .json<input type="file" accept=".json,application/json" style={{display:"none"}} onChange={e=>onMapImport(e,"json")}/></label>
+        </div>
+      </div>
       <div style={{height:1,background:T.bd,margin:"4px 20px"}}/>
       {ASPECTS.map(a=><Row key={a.id} icon={a.icon} label={a.name} count={aspTopicCounts[a.id]||0} onClick={()=>goAspect(a)}/>)}
     </div>
@@ -466,6 +669,36 @@ function App(){
       </>}
       {curTopic.source==="azgaar"&&<div style={{fontSize:11,color:T.gold,marginTop:12}}>📍 Imported from Azgaar map</div>}
       {(!curTopic.fields||Object.keys(curTopic.fields).length===0)&&<div style={{padding:"40px 0",textAlign:"center",color:T.txD,fontSize:14}}>No fields yet</div>}
+    </div>
+  </>);
+
+  if(scr==="mapview"&&mapSvg)return S(<>
+    <Hdr title="Map" subtitle={cW?.name} onBack={()=>setScr("world")}/>
+    <div style={{flex:1,position:"relative",overflow:"hidden",background:"#e8ecf0",touchAction:"none"}}
+      ref={el=>{if(el&&!el._init&&mapSvg){el._init=true;
+        el.innerHTML='<div class="map-container" style="position:absolute;top:0;left:0;transform-origin:0 0">'+mapSvg+'</div>';
+        const mc=el.querySelector('.map-container'),svg=mc&&mc.querySelector('svg');
+        if(svg){const vb=svg.getAttribute('viewBox');let sw=1920,sh=937;
+          if(vb){const p=vb.split(/[\s,]+/).map(Number);if(p.length===4){sw=p[2];sh=p[3];}}
+          svg.setAttribute('width',sw);svg.setAttribute('height',sh);svg.style.width=sw+'px';svg.style.height=sh+'px';
+          const vbg=svg.querySelector('#viewbox');if(vbg)vbg.style.display='';
+          const r=el.getBoundingClientRect(),s=Math.min(r.width/sw,r.height/sh)*0.9;
+          const ox=(r.width-sw*s)/2,oy=(r.height-sh*s)/2;
+          mc.style.transform='translate('+ox+'px,'+oy+'px) scale('+s+')';
+          let z=s,px=ox,py=oy,td=0;
+          el.ontouchstart=e=>{if(e.touches.length===2){const dx=e.touches[1].clientX-e.touches[0].clientX,dy=e.touches[1].clientY-e.touches[0].clientY;td=Math.hypot(dx,dy);}};
+          el.ontouchmove=e=>{e.preventDefault();
+            if(e.touches.length===1){const t=e.touches[0];if(!el._lx){el._lx=t.clientX;el._ly=t.clientY;}
+              px+=t.clientX-el._lx;py+=t.clientY-el._ly;el._lx=t.clientX;el._ly=t.clientY;mc.style.transform='translate('+px+'px,'+py+'px) scale('+z+')';}
+            if(e.touches.length===2){const dx=e.touches[1].clientX-e.touches[0].clientX,dy=e.touches[1].clientY-e.touches[0].clientY,dist=Math.hypot(dx,dy);
+              if(td){const f=dist/td,nz=Math.max(.01,Math.min(100,z*f)),cx=(e.touches[0].clientX+e.touches[1].clientX)/2-r.left,cy=(e.touches[0].clientY+e.touches[1].clientY)/2-r.top;
+                const mx=(cx-px)/z,my=(cy-py)/z;px=cx-mx*nz;py=cy-my*nz;z=nz;mc.style.transform='translate('+px+'px,'+py+'px) scale('+z+')';}td=dist;}};
+          el.ontouchend=()=>{el._lx=null;el._ly=null;};
+          let md=false,mx0=0,my0=0;
+          el.onmousedown=e=>{md=true;mx0=e.clientX;my0=e.clientY;};
+          el.onmousemove=e=>{if(!md)return;px+=e.clientX-mx0;py+=e.clientY-my0;mx0=e.clientX;my0=e.clientY;mc.style.transform='translate('+px+'px,'+py+'px) scale('+z+')';};
+          el.onmouseup=()=>md=false;el.onmouseleave=()=>md=false;
+        }}}}>
     </div>
   </>);
 

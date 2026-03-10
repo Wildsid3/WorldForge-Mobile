@@ -1,4 +1,4 @@
-const CACHE = 'worldforge-v11';
+const CACHE = 'worldforge-v13';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', e => {
